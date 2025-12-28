@@ -192,15 +192,16 @@ export default function ProfilePage() {
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="w-full max-w-6xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8 md:py-12">
           {/* Header Card */}
+          {user && (
           <div className="bg-white bg-opacity-5 backdrop-blur-lg border border-slate-700 rounded-2xl p-4 sm:p-6 md:p-8 mb-6 md:mb-8">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-2xl sm:text-3xl">
-                  {user.name.charAt(0).toUpperCase()}
+                  {user.name && user.name.length > 0 ? user.name.charAt(0).toUpperCase() : "U"}
                 </div>
                 <div>
-                  <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white">{user.name}</h1>
-                  <p className="text-sm sm:text-base text-gray-400">{user.email}</p>
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white">{user.name || "Utilizator"}</h1>
+                  <p className="text-sm sm:text-base text-gray-400">{user.email || "noemail@domain.com"}</p>
                   <p className="text-xs sm:text-sm text-cyan-300 mt-1">Membru din {new Date(userJoinDate).toLocaleDateString("ro-RO")}</p>
                 </div>
               </div>
@@ -251,6 +252,7 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
+          )}
 
           {/* Tabs */}
           <div className="mb-6 md:mb-8">
@@ -491,18 +493,18 @@ export default function ProfilePage() {
                       <div>
                         <p className="text-gray-300 text-sm">Statutul Profilului</p>
                         <p className="text-xs text-gray-500 mt-1">
-                          {user.isPrivate ? "Profil privat - doar tu poți vedea" : "Profil public - toți pot vedea"}
+                          {userIsPrivate ? "Profil privat - doar tu poți vedea" : "Profil public - toți pot vedea"}
                         </p>
                       </div>
                       <button
                         onClick={handlePrivacyToggle}
                         className={`px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm transition ${
-                          user.isPrivate
+                          userIsPrivate
                             ? "bg-red-600 hover:bg-red-700 text-white"
                             : "bg-green-600 hover:bg-green-700 text-white"
                         }`}
                       >
-                        {user.isPrivate ? "🔒 Privat" : "🌍 Public"}
+                        {userIsPrivate ? "🔒 Privat" : "🌍 Public"}
                       </button>
                     </div>
                   </div>

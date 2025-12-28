@@ -21,12 +21,14 @@ export default function Header() {
       setIsLoggedIn(true);
       try {
         const userData = JSON.parse(user);
-        setUserName(userData.name || userData.email || "Utilizator");
+        const name = userData?.name || userData?.email || "U";
+        setUserName(name && name.length > 0 ? name : "U");
       } catch {
-        setUserName("Utilizator");
+        setUserName("U");
       }
     } else {
       setIsLoggedIn(false);
+      setUserName("U");
     }
   }, []);
 
@@ -95,9 +97,9 @@ export default function Header() {
                 <button
                   onClick={() => setUserMenu(!userMenu)}
                   className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-bold text-sm transition group"
-                  title={userName}
+                  title={userName || "Profil"}
                 >
-                  {userName.charAt(0).toUpperCase()}
+                  {(userName && userName.length > 0) ? userName.charAt(0).toUpperCase() : "U"}
                 </button>
                 {userMenu && (
                   <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-lg py-2 z-50">
