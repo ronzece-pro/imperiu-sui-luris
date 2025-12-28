@@ -26,7 +26,7 @@ export default function Header() {
               ISL
             </div>
             <span className="text-white font-bold text-lg hidden sm:inline group-hover:text-blue-400 transition">
-              Imperiu Sui Luris
+              Imperiul Sui Luris
             </span>
           </Link>
 

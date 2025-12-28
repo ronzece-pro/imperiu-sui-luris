@@ -117,7 +117,7 @@ export default function Globe() {
 
         {/* Title and Motto */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">Imperiu Sui Luris</h1>
+          <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">Imperiul Sui Luris</h1>
           <p className="text-xl md:text-2xl text-cyan-300 font-light">Libertate • Fraternitate • Durabilitate</p>
         </div>
 

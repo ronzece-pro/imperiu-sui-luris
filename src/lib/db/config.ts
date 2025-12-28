@@ -25,7 +25,7 @@ export const mockDatabase = {
       email: "admin@imperiu-sui-luris.com",
       username: "admin_sui",
       fullName: "State Administrator",
-      country: "Imperiu Sui Luris",
+      country: "Imperiul Sui Luris",
       citizenship: "active",
       createdAt: new Date("2023-01-01"),
       updatedAt: new Date(),
@@ -61,7 +61,7 @@ export const mockDatabase = {
       id: "land_001",
       userId: "user_001",
       name: "Green Valley Farm",
-      location: "North Sector, Imperiu Sui Luris",
+      location: "North Sector, Imperiul Sui Luris",
       coordinates: {
         latitude: 45.9432,
         longitude: 24.9668,
@@ -83,7 +83,7 @@ export const mockDatabase = {
     {
       id: "feed_001",
       authorId: "user_admin",
-      content: "Welcome to Imperiu Sui Luris! We're building a new nation focused on liberty, brotherhood, and sustainability. Join our mission to protect water, ensure food security, and develop clean energy!",
+      content: "Welcome to Imperiul Sui Luris! We're building a new nation focused on liberty, brotherhood, and sustainability. Join our mission to protect water, ensure food security, and develop clean energy!",
       images: [],
       createdAt: new Date("2024-01-01"),
       updatedAt: new Date(),
