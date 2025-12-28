@@ -35,7 +35,7 @@ export default function LoginPage() {
         localStorage.setItem("user", JSON.stringify(data.data.user));
         
         // Redirect admin to admin panel
-        if (data.data.user?.role === "admin" || data.data.user?.email === "admin@imperiul-sui-luris.com") {
+        if (data.data.user?.role === "admin" || data.data.user?.email === "admin@imperiu-sui-luris.com") {
           router.push("/admin");
         } else {
           router.push("/dashboard");

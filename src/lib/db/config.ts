@@ -2,6 +2,8 @@
 // In production, use PostgreSQL with Prisma or TypeORM
 // For development, we'll use a mock database structure
 
+import bcrypt from "bcryptjs";
+
 export const DATABASE_URL = process.env.DATABASE_URL || "postgresql://user:password@localhost:5432/imperiu_sui_luris";
 
 // Mock database for development
@@ -14,7 +16,7 @@ export const mockDatabase = {
       fullName: "Test Citizen",
       country: "Romania",
       // default dev password: 'password123' (hashed)
-      passwordHash: require("bcryptjs").hashSync("password123", 8),
+      passwordHash: bcrypt.hashSync("password123", 8),
       citizenship: "active",
       totalLandArea: 2500,
       totalFunds: 5000,
@@ -29,7 +31,7 @@ export const mockDatabase = {
       fullName: "State Administrator",
       country: "Imperiul Sui Luris",
       citizenship: "active",
-      passwordHash: require("bcryptjs").hashSync("adminpass", 8),
+      passwordHash: bcrypt.hashSync("adminpass", 8),
       createdAt: new Date("2023-01-01"),
       updatedAt: new Date(),
     },
@@ -81,7 +83,7 @@ export const mockDatabase = {
       updatedAt: new Date(),
     },
   ],
-  transactions: [] as any[],
+  transactions: [] as unknown[],
   feedPosts: [
     {
       id: "feed_001",

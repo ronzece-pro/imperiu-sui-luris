@@ -13,23 +13,52 @@ export default function Header() {
   const router = useRouter();
 
   useEffect(() => {
-    // Check if user is logged in by looking at localStorage
-    const token = localStorage.getItem("token");
-    const user = localStorage.getItem("user");
-    
-    if (token && user) {
-      setIsLoggedIn(true);
+    const readAuthFromStorage = () => {
       try {
-        const userData = JSON.parse(user);
-        const name = userData?.name || userData?.email || "U";
-        setUserName(name && name.length > 0 ? name : "U");
+        const token = localStorage.getItem("token");
+        const user = localStorage.getItem("user");
+
+        if (token && user) {
+          let display = "U";
+          try {
+            const userData: unknown = JSON.parse(user);
+            if (userData && typeof userData === "object") {
+              const u = userData as { fullName?: unknown; username?: unknown; email?: unknown };
+              const candidate =
+                (typeof u.fullName === "string" && u.fullName) ||
+                (typeof u.username === "string" && u.username) ||
+                (typeof u.email === "string" && u.email) ||
+                "U";
+              display = candidate;
+            }
+          } catch {
+            display = "U";
+          }
+
+          setIsLoggedIn(true);
+          setUserName(display && display.length > 0 ? display : "U");
+        } else {
+          setIsLoggedIn(false);
+          setUserName("U");
+        }
       } catch {
+        setIsLoggedIn(false);
         setUserName("U");
       }
-    } else {
-      setIsLoggedIn(false);
-      setUserName("U");
-    }
+    };
+
+    // Defer state update to avoid setState-in-effect lint rule
+    const t = setTimeout(readAuthFromStorage, 0);
+
+    const onStorage = () => {
+      readAuthFromStorage();
+    };
+    window.addEventListener("storage", onStorage);
+
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("storage", onStorage);
+    };
   }, []);
 
   const handleLogout = () => {

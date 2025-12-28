@@ -2,6 +2,20 @@
 
 import { useState, useEffect } from "react";
 
+interface EthereumProvider {
+  request<T = unknown>(args: { method: string; params?: unknown[] }): Promise<T>;
+}
+
+type ApiTx = {
+  id?: unknown;
+  type?: unknown;
+  amount?: unknown;
+  description?: unknown;
+  source?: unknown;
+  status?: unknown;
+  createdAt?: unknown;
+};
+
 interface Transaction {
   id: string;
   type: "purchase" | "topup" | "refund" | "sale";
@@ -13,41 +27,62 @@ interface Transaction {
 }
 
 export default function WalletPanel() {
-  const [balance, setBalance] = useState(2500.5);
-  const [spent, setSpent] = useState(1245.75);
-  const [transactions, setTransactions] = useState<Transaction[]>([
-    {
-      id: "tx_1",
-      type: "topup",
-      amount: 1000,
-      description: "Încarcă portofel - Stripe",
-      paymentMethod: "stripe",
-      status: "completed",
-      createdAt: "2024-12-25 14:30",
-    },
-    {
-      id: "tx_2",
-      type: "purchase",
-      amount: 50,
-      description: "Cumpărare postare: Document Oficial",
-      paymentMethod: "wallet",
-      status: "completed",
-      createdAt: "2024-12-24 10:15",
-    },
-    {
-      id: "tx_3",
-      type: "purchase",
-      amount: 99.99,
-      description: "Cumpărare postare: Teren Premium",
-      paymentMethod: "metamask",
-      status: "completed",
-      createdAt: "2024-12-23 16:45",
-    },
-  ]);
+  const [balance, setBalance] = useState(0);
+  const [spent, setSpent] = useState(0);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   const [showTopup, setShowTopup] = useState(false);
   const [topupAmount, setTopupAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"stripe" | "metamask">("stripe");
+
+  const loadWallet = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const res = await fetch("/api/wallet", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!data?.success) return;
+
+    const nextBalance = Number(data.data?.balance || 0);
+    const txs: unknown[] = Array.isArray(data.data?.transactions) ? data.data.transactions : [];
+    const mapped: Transaction[] = txs.map((raw) => {
+      const tx = (raw ?? {}) as ApiTx;
+      const type = (typeof tx.type === "string" ? tx.type : "topup") as Transaction["type"];
+      const status = (typeof tx.status === "string" ? tx.status : "completed") as Transaction["status"];
+      const source = typeof tx.source === "string" ? tx.source : "wallet";
+      const description = typeof tx.description === "string" ? tx.description : source;
+
+      return {
+        id: String(tx.id ?? ""),
+        type,
+        amount: Number(tx.amount ?? 0),
+        description: String(description || "Tranzacție"),
+        paymentMethod: String(source),
+        status,
+        createdAt: String(tx.createdAt ?? ""),
+      };
+    });
+
+    const spentTotal = mapped.filter((t) => t.type === "purchase").reduce((sum, t) => sum + t.amount, 0);
+
+    setBalance(nextBalance);
+    setTransactions(mapped);
+    setSpent(spentTotal);
+  };
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        await loadWallet();
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    load();
+  }, []);
 
   const remaining = balance - spent;
 
@@ -59,15 +94,18 @@ export default function WalletPanel() {
 
     try {
       const amount = parseFloat(topupAmount);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Te rog autentifică-te întâi");
+        return;
+      }
+
       if (paymentMethod === "stripe") {
         // Create a Stripe checkout session on the server
-        const userStr = localStorage.getItem("user");
-        const currentUser = userStr ? JSON.parse(userStr) : null;
-        const uid = currentUser?.id || "user_001";
         const res = await fetch("/api/wallet", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "addFunds", userId: uid, amount, paymentMethod: "stripe" }),
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ action: "addFunds", amount, paymentMethod: "stripe" }),
         });
         const data = await res.json();
         if (data.success && data.data?.sessionUrl) {
@@ -79,25 +117,61 @@ export default function WalletPanel() {
         }
       }
 
-      // Fallback local topup (LURIS amount)
-      const newBalance = balance + amount;
-      setBalance(newBalance);
+      // MetaMask flow (LURIS amount)
+      const luris = Math.floor(amount);
+      if (luris <= 0) {
+        alert("Introdu un număr întreg de LURIS");
+        return;
+      }
 
-      const methodLabel = (paymentMethod as string) === "stripe" ? "Stripe" : "MetaMask";
-      const newTransaction: Transaction = {
-        id: `tx_${Date.now()}`,
-        type: "topup",
-        amount,
-        description: `Încarcă portofel - ${methodLabel}`,
-        paymentMethod,
-        status: "completed",
-        createdAt: new Date().toLocaleString("ro-RO"),
-      };
+      const eth = (window as unknown as { ethereum?: EthereumProvider })?.ethereum;
+      if (!eth?.request) {
+        alert("MetaMask nu este disponibil în acest browser");
+        return;
+      }
 
-      setTransactions([newTransaction, ...transactions]);
+      const accounts: string[] = await eth.request({ method: "eth_requestAccounts" });
+      const from = accounts?.[0];
+      if (!from) {
+        alert("Nu am putut obține contul MetaMask");
+        return;
+      }
+
+      const quoteRes = await fetch("/api/wallet", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: "createMetamaskTopup", lurisAmount: luris }),
+      });
+      const quote = await quoteRes.json();
+      if (!quote?.success) {
+        alert(quote?.message || "Eroare la inițiere plata MetaMask");
+        return;
+      }
+
+      const to = String(quote.data?.to || "");
+      const valueWei = String(quote.data?.valueWei || "0");
+      const valueHex = `0x${BigInt(valueWei).toString(16)}`;
+
+      const sentTxHash: string = await eth.request({
+        method: "eth_sendTransaction",
+        params: [{ from, to, value: valueHex }],
+      });
+
+      const confirmRes = await fetch("/api/wallet", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: "confirmMetamaskTopup", lurisAmount: luris, txHash: sentTxHash }),
+      });
+      const confirm = await confirmRes.json();
+      if (!confirm?.success) {
+        alert(confirm?.message || "Tranzacție trimisă, dar nu a putut fi confirmată încă");
+        return;
+      }
+
+      await loadWallet();
       setTopupAmount("");
       setShowTopup(false);
-      alert(`✓ Portofel încărcat cu ${amount} LURIS`);
+      alert(`✓ Portofel încărcat cu ${luris} LURIS`);
     } catch (error) {
       alert("Eroare la încărcare");
       console.error(error);
@@ -187,13 +261,15 @@ export default function WalletPanel() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Sumă (USD pentru Stripe)</label>
+                <label className="block text-sm font-medium mb-2">
+                  {paymentMethod === "stripe" ? "Sumă (USD pentru Stripe)" : "Sumă (LURIS pentru MetaMask)"}
+                </label>
                 <input
                   type="number"
                   value={topupAmount}
                   onChange={(e) => setTopupAmount(e.target.value)}
-                  placeholder="100.00"
-                  step="0.01"
+                  placeholder={paymentMethod === "stripe" ? "100.00" : "100"}
+                  step={paymentMethod === "stripe" ? "0.01" : "1"}
                   min="0"
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
                 />
@@ -250,7 +326,7 @@ export default function WalletPanel() {
                 onClick={handleTopup}
                 className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-bold transition"
               >
-                Plătește ${topupAmount || "0.00"}
+                {paymentMethod === "stripe" ? `Plătește $${topupAmount || "0.00"}` : "Plătește cu MetaMask"}
               </button>
             </div>
           </div>

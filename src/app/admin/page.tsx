@@ -52,7 +52,7 @@ export default function AdminDashboard() {
       }
 
       setIsOwner(true);
-      setUserName(user?.name || "Admin");
+      setUserName(user?.fullName || user?.username || user?.email || "Admin");
       
       // Fetch admin stats
       fetchAdminStats();

@@ -4,11 +4,37 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 
+interface DashboardUser {
+  fullName: string;
+  citizenship: string;
+}
+
+interface DashboardDoc {
+  id: string;
+  type: string;
+  documentNumber: string;
+  status: string;
+}
+
+interface DashboardLand {
+  id: string;
+  name: string;
+  location: string;
+  areaSize: number;
+  type: string;
+}
+
+interface DashboardStats {
+  documentCount: number;
+  totalLandArea: number;
+  propertyCount: number;
+}
+
 interface UserData {
-  user: any;
-  documents: any[];
-  landProperties: any[];
-  stats: any;
+  user: DashboardUser;
+  documents: DashboardDoc[];
+  landProperties: DashboardLand[];
+  stats: DashboardStats;
 }
 
 export default function DashboardPage() {
@@ -36,13 +62,14 @@ export default function DashboardPage() {
           throw new Error("Failed to fetch user data");
         }
 
-        const data = await response.json();
-        if (data.success) {
+        const raw: unknown = await response.json();
+        const data = raw as { success?: boolean; data?: UserData; error?: string; message?: string };
+        if (data.success && data.data) {
           setUserData(data.data);
         } else {
-          setError(data.error);
+          setError(data.error || data.message || "Error loading dashboard");
         }
-      } catch (err) {
+      } catch {
         setError("Error loading dashboard");
       } finally {
         setLoading(false);
@@ -130,7 +157,7 @@ export default function DashboardPage() {
             <h2 className="text-2xl font-bold text-white mb-6">Documente</h2>
             {userData.documents.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {userData.documents.map((doc: any) => (
+                {userData.documents.map((doc) => (
                   <div
                     key={doc.id}
                     className="bg-white bg-opacity-5 backdrop-blur-sm border border-slate-700 rounded-lg p-6"
@@ -164,7 +191,7 @@ export default function DashboardPage() {
             <h2 className="text-2xl font-bold text-white mb-6">Proprietăți Teren</h2>
             {userData.landProperties.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {userData.landProperties.map((land: any) => (
+                {userData.landProperties.map((land) => (
                   <div
                     key={land.id}
                     className="bg-white bg-opacity-5 backdrop-blur-sm border border-slate-700 rounded-lg p-6"

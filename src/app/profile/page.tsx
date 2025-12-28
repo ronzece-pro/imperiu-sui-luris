@@ -8,8 +8,9 @@ import WalletPanel from "@/components/wallet/WalletPanel";
 
 interface UserProfile {
   id: string;
-  name: string;
+  fullName: string;
   email: string;
+  username?: string;
   role?: string;
   joinDate?: string;
   country?: string;
@@ -77,13 +78,32 @@ export default function ProfilePage() {
         if (data.success && data.data.user) {
           setUser(data.data.user);
           setDocuments(data.data.documents || []);
-          setProperties(data.data.properties || []);
-          setEditName(data.data.user.name);
+          const lands = Array.isArray(data.data.landProperties) ? data.data.landProperties : [];
+          setProperties(
+            lands.map((raw: unknown) => {
+              const l = (raw ?? {}) as {
+                id?: unknown;
+                name?: unknown;
+                areaSize?: unknown;
+                location?: unknown;
+                purchasePrice?: unknown;
+              };
+
+              return {
+                id: String(l.id ?? ""),
+                name: String(l.name ?? ""),
+                area: Number(l.areaSize ?? 0),
+                location: String(l.location ?? ""),
+                price: Number(l.purchasePrice ?? 0),
+              };
+            })
+          );
+          setEditName(data.data.user.fullName);
           setEditEmail(data.data.user.email);
         } else if (userData) {
           // Fallback to localStorage data
           setUser(userData);
-          setEditName(userData.name);
+          setEditName(userData.fullName);
           setEditEmail(userData.email);
           setDocuments([]);
           setProperties([]);
@@ -96,7 +116,7 @@ export default function ProfilePage() {
         if (userStr) {
           const userData = JSON.parse(userStr);
           setUser(userData);
-          setEditName(userData.name);
+          setEditName(userData.fullName);
           setEditEmail(userData.email);
         } else {
           router.push("/auth/login");
@@ -126,13 +146,13 @@ export default function ProfilePage() {
     const token = localStorage.getItem("token");
     try {
       const response = await fetch("/api/users", {
-        method: "POST",
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          name: editName,
+          fullName: editName,
           email: editEmail,
           password: editPassword || undefined,
         }),
@@ -141,7 +161,7 @@ export default function ProfilePage() {
       const data = await response.json();
 
       if (data.success) {
-        setUser({ ...user!, name: editName, email: editEmail });
+        setUser({ ...user!, fullName: editName, email: editEmail });
         localStorage.setItem("user", JSON.stringify(data.data.user));
         setIsEditing(false);
         setEditPassword("");
@@ -198,10 +218,10 @@ export default function ProfilePage() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-2xl sm:text-3xl">
-                  {user.name && user.name.length > 0 ? user.name.charAt(0).toUpperCase() : "U"}
+                  {user.fullName && user.fullName.length > 0 ? user.fullName.charAt(0).toUpperCase() : "U"}
                 </div>
                 <div>
-                  <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white">{user.name || "Utilizator"}</h1>
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white">{user.fullName || "Utilizator"}</h1>
                   <p className="text-sm sm:text-base text-gray-400">{user.email || "noemail@domain.com"}</p>
                   <p className="text-xs sm:text-sm text-cyan-300 mt-1">Membru din {new Date(userJoinDate).toLocaleDateString("ro-RO")}</p>
                 </div>
@@ -286,7 +306,7 @@ export default function ProfilePage() {
                 <div className="space-y-3 sm:space-y-4 text-sm sm:text-base">
                   <div>
                     <p className="text-gray-400">Nume Complet</p>
-                    <p className="text-white font-semibold">{user.name}</p>
+                    <p className="text-white font-semibold">{user.fullName}</p>
                   </div>
                   <div>
                     <p className="text-sm sm:text-base text-gray-400">Email</p>

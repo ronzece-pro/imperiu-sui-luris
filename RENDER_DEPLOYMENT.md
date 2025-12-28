@@ -27,7 +27,7 @@
 |---------|---------|
 | **Name** | `imperiu-sui-luris` |
 | **Environment** | `Node` |
-| **Build Command** | `npm run build` |
+| **Build Command** | `npm run render:build` |
 | **Start Command** | `npm start` |
 | **Plan** | Free (sau Premium) |
 | **Region** | Frankfurt (Europa) |
@@ -40,7 +40,19 @@ NEXT_PUBLIC_API_URL=https://imperiu-sui-luris.onrender.com
 NODE_ENV=production
 NEXT_TELEMETRY_DISABLED=1
 JWT_SECRET=your-super-secret-key-here
-DATABASE_URL=postgresql://... (dacă adaugi PostgreSQL)
+DATABASE_URL=postgresql://... (obligatoriu în production)
+
+# Stripe (dacă folosești topup cu card)
+STRIPE_SECRET_KEY=sk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+NEXT_PUBLIC_STRIPE_PUBLIC_KEY=pk_live_...
+
+# MetaMask (dacă folosești topup on-chain)
+METAMASK_WALLET=0xYourReceivingWallet
+EVM_RPC_URL=https://your-rpc-provider
+METAMASK_WEI_PER_LURIS=1000000000000000
+# optional
+METAMASK_CHAIN_ID=1
 ```
 
 ### 5. **Deploy Automat din GitHub**
@@ -50,7 +62,7 @@ DATABASE_URL=postgresql://... (dacă adaugi PostgreSQL)
 
 ---
 
-## 🗄️ Adaugă PostgreSQL (Optional)
+## 🗄️ Adaugă PostgreSQL
 
 ### A. Crează Database pe Render
 
@@ -69,23 +81,9 @@ DATABASE_URL=postgresql://... (dacă adaugi PostgreSQL)
 2. Adaugă `DATABASE_URL` cu valorea copiată
 3. Redeploy serviciul
 
-### C. Instalare Prisma (în projeto)
+### C. Prisma migrations
 
-```bash
-npm install @prisma/client prisma
-npx prisma init
-```
-
-Editează `prisma/.env`:
-```
-DATABASE_URL="postgresql://user:pass@host/db"
-```
-
-Crează migrare:
-```bash
-npx prisma migrate dev --name init
-npx prisma db push
-```
+Aplicația rulează automat `prisma generate` + `prisma migrate deploy` în `npm run render:build`.
 
 ---
 
@@ -99,6 +97,12 @@ JWT_SECRET=generate-this-with: openssl rand -base64 32
 # OPTIONAL
 DATABASE_URL=postgresql://...
 STRIPE_SECRET_KEY=sk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+NEXT_PUBLIC_STRIPE_PUBLIC_KEY=pk_live_...
+
+METAMASK_WALLET=0xYourReceivingWallet
+EVM_RPC_URL=https://your-rpc-provider
+METAMASK_WEI_PER_LURIS=1000000000000000
 SENDGRID_API_KEY=...
 ```
 

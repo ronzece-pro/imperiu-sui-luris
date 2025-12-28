@@ -37,7 +37,8 @@ export async function POST(request: NextRequest) {
       return authErrorResponse();
     }
 
-    const { content, images, action, postId } = await request.json();
+    const body = await request.json();
+    const { content, images, action, postId, text } = body;
 
     // Check if user is admin (only admin can post)
     const user = mockDatabase.users.find((u) => u.id === decoded.userId);
@@ -72,23 +73,27 @@ export async function POST(request: NextRequest) {
       post.likes += 1;
       return successResponse(post, "Post liked");
     } else if (action === "comment") {
-      const body = await request.json();
-      const text = body.text || body.content;
+      const commentText = (text || content || "").toString();
       const post = mockDatabase.feedPosts.find((p) => p.id === postId);
       if (!post) {
         return errorResponse("Post not found", 404);
       }
 
-      const comment: any = {
+      if (!commentText.trim()) {
+        return errorResponse("Comment content is required", 400);
+      }
+
+      const comment = {
         id: `comment_${Date.now()}`,
         postId,
         authorId: decoded.userId,
-        content: text,
+        content: commentText,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
 
-      (post.comments as any).push(comment);
+      const comments = post.comments as unknown[];
+      comments.push(comment);
       return successResponse(post, "Comment added", 201);
     }
 

@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Wallet {
+  id        String             @id @default(cuid())
+  userId    String             @unique
+  currency  String             @default("LURIS")
+  balance   Decimal            @db.Decimal(18, 2) @default(0)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  transactions WalletTransaction[]
+
+  @@index([userId])
+}
+
+model WalletTransaction {
+  id            String   @id @default(cuid())
+  walletId      String
+  wallet        Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  type          String
+  amount        Decimal  @db.Decimal(18, 2)
+  status        String   @default("completed")
+
+  source        String?
+  description   String?
+  stripeSessionId String? @unique
+  metamaskTxHash  String? @unique
+  metadata      Json?
+
+  createdAt     DateTime @default(now())
+
+  @@index([walletId])
+  @@index([stripeSessionId])
+  @@index([metamaskTxHash])
+}

@@ -43,7 +43,15 @@ export async function POST(request: NextRequest) {
       const token = createToken(newUser.id, newUser.email);
       return successResponse(
         {
-          user: newUser,
+          user: {
+            id: newUser.id,
+            email: newUser.email,
+            username: newUser.username,
+            fullName: newUser.fullName,
+            citizenship: newUser.citizenship,
+            createdAt: newUser.createdAt,
+            role: "user",
+          },
           token,
         },
         "User registered successfully",
@@ -52,14 +60,17 @@ export async function POST(request: NextRequest) {
     } else if (action === "login") {
       // Check if it's admin owner login
       if (validateAdminCredentials(email, password)) {
-        const adminConfig = getAdminConfig();
-        const token = createToken(adminConfig.owner.id, adminConfig.owner.email);
+        // Use the same admin identity as the rest of the app (e.g. feed permissions)
+        const adminUserId = "user_admin";
+        const adminEmail = "admin@imperiu-sui-luris.com";
+        const token = createToken(adminUserId, adminEmail);
         return successResponse(
           {
             user: {
-              id: adminConfig.owner.id,
-              email: adminConfig.owner.email,
-              name: "Owner Admin",
+              id: adminUserId,
+              email: adminEmail,
+              username: "admin_sui",
+              fullName: "State Administrator",
               role: "admin",
               citizenship: "owner",
             },
@@ -75,7 +86,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Verify password
-      const isValid = verifyPassword(password, (user as any).passwordHash || "");
+      const isValid = verifyPassword(password, user.passwordHash || "");
       if (!isValid) {
         return errorResponse("Invalid email or password", 401);
       }

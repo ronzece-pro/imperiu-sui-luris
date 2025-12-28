@@ -6,11 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "render:build": "npm run prisma:generate && npm run prisma:migrate:deploy && npm run build"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^5.4.1",
     "@stripe/stripe-js": "^8.6.0",
+    "@prisma/client": "^6.3.1",
     "bcryptjs": "^2.4.3",
     "ethers": "^6.16.0",
     "jsonwebtoken": "^9.0.0",
@@ -29,6 +33,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "prisma": "^6.3.1"
   }
 }

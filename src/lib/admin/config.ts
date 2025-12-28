@@ -1,11 +1,13 @@
 // Admin Configuration & Database
+import bcrypt from "bcryptjs";
+
 export const adminDatabase = {
   // Owner admin account
   owner: {
     id: "admin_owner",
-    email: "admin@imperiul-sui-luris.com",
-    // For security, store hashed password during runtime; initial default is 'test1'
-    passwordHash: require("bcryptjs").hashSync("test1", 8),
+    email: "admin@imperiu-sui-luris.com",
+    // Default for local dev only; set `ADMIN_PASSWORD` in production
+    passwordHash: bcrypt.hashSync(process.env.ADMIN_PASSWORD || "adminpass", 8),
     role: "owner",
     permissions: [
       "manage_users",
@@ -134,7 +136,7 @@ Vânzările neautorizate sunt interzise.
   },
 
   // Admin Logs
-  adminLogs: [] as any[],
+  adminLogs: [] as unknown[],
 };
 
 // Helper function to log admin actions

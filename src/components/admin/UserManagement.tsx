@@ -88,8 +88,7 @@ export default function AdminUserManagement({ onClose }: Props) {
           u.id === user.id
             ? {
                 ...u,
-                status:
-                  action === "delete" ? ("banned" as const) : (action as any),
+                status: (action === "block" ? "blocked" : "banned") as User["status"],
               }
             : u
         )
