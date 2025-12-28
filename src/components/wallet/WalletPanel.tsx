@@ -59,15 +59,36 @@ export default function WalletPanel() {
 
     try {
       const amount = parseFloat(topupAmount);
+      if (paymentMethod === "stripe") {
+        // Create a Stripe checkout session on the server
+        const userStr = localStorage.getItem("user");
+        const currentUser = userStr ? JSON.parse(userStr) : null;
+        const uid = currentUser?.id || "user_001";
+        const res = await fetch("/api/wallet", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "addFunds", userId: uid, amount, paymentMethod: "stripe" }),
+        });
+        const data = await res.json();
+        if (data.success && data.data?.sessionUrl) {
+          window.location.href = data.data.sessionUrl;
+          return;
+        } else {
+          alert("Eroare la inițiere plata Stripe");
+          return;
+        }
+      }
+
+      // Fallback local topup (LURIS amount)
       const newBalance = balance + amount;
-      
       setBalance(newBalance);
-      
+
+      const methodLabel = (paymentMethod as string) === "stripe" ? "Stripe" : "MetaMask";
       const newTransaction: Transaction = {
         id: `tx_${Date.now()}`,
         type: "topup",
         amount,
-        description: `Încarcă portofel - ${paymentMethod === "stripe" ? "Stripe" : "MetaMask"}`,
+        description: `Încarcă portofel - ${methodLabel}`,
         paymentMethod,
         status: "completed",
         createdAt: new Date().toLocaleString("ro-RO"),
@@ -76,7 +97,7 @@ export default function WalletPanel() {
       setTransactions([newTransaction, ...transactions]);
       setTopupAmount("");
       setShowTopup(false);
-      alert(`✓ Portofel încărcat cu $${amount}`);
+      alert(`✓ Portofel încărcat cu ${amount} LURIS`);
     } catch (error) {
       alert("Eroare la încărcare");
       console.error(error);
@@ -89,19 +110,19 @@ export default function WalletPanel() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-gradient-to-br from-green-900 to-green-800 border border-green-700 rounded-xl p-6">
           <p className="text-green-200 text-sm font-medium">Sold Disponibil</p>
-          <p className="text-3xl font-bold text-white mt-2">${balance.toFixed(2)}</p>
+          <p className="text-3xl font-bold text-white mt-2">{balance} LURIS</p>
           <p className="text-green-300 text-xs mt-1">💰 Active</p>
         </div>
 
         <div className="bg-gradient-to-br from-orange-900 to-orange-800 border border-orange-700 rounded-xl p-6">
           <p className="text-orange-200 text-sm font-medium">Cheltuit</p>
-          <p className="text-3xl font-bold text-white mt-2">${spent.toFixed(2)}</p>
+          <p className="text-3xl font-bold text-white mt-2">{spent} LURIS</p>
           <p className="text-orange-300 text-xs mt-1">📊 Total</p>
         </div>
 
         <div className="bg-gradient-to-br from-blue-900 to-blue-800 border border-blue-700 rounded-xl p-6">
           <p className="text-blue-200 text-sm font-medium">Rămas de Cheltuit</p>
-          <p className="text-3xl font-bold text-white mt-2">${remaining.toFixed(2)}</p>
+          <p className="text-3xl font-bold text-white mt-2">{remaining} LURIS</p>
           <p className="text-blue-300 text-xs mt-1">💳 Disponibil</p>
         </div>
       </div>
@@ -135,7 +156,7 @@ export default function WalletPanel() {
                     <p className={`font-bold text-lg ${
                       tx.type === "topup" || tx.type === "sale" ? "text-green-400" : "text-red-400"
                     }`}>
-                      {tx.type === "topup" || tx.type === "sale" ? "+" : "-"}${tx.amount.toFixed(2)}
+                      {tx.type === "topup" || tx.type === "sale" ? "+" : "-"}{tx.amount}
                     </p>
                     <span className={`text-xs px-2 py-1 rounded mt-1 inline-block ${
                       tx.status === "completed"
@@ -166,7 +187,7 @@ export default function WalletPanel() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Sumă (USD)</label>
+                <label className="block text-sm font-medium mb-2">Sumă (USD pentru Stripe)</label>
                 <input
                   type="number"
                   value={topupAmount}

@@ -4,7 +4,8 @@ export const adminDatabase = {
   owner: {
     id: "admin_owner",
     email: "admin@imperiul-sui-luris.com",
-    password: "test1",
+    // For security, store hashed password during runtime; initial default is 'test1'
+    passwordHash: require("bcryptjs").hashSync("test1", 8),
     role: "owner",
     permissions: [
       "manage_users",

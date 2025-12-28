@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { successResponse, errorResponse } from "@/lib/api/response";
+import Stripe from "stripe";
+import { adminDatabase } from "@/lib/admin/config";
+import { getOrCreateWallet, addFundsToWallet } from "@/lib/wallet/persistence";
 
-// Simulated wallet database
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", { apiVersion: "2022-11-15" });
+
+// Simulated wallet database (store LURIS balance)
 const walletDatabase: Record<string, any> = {
   user_wallet: {
-    balance: 2500.5,
-    currency: "USD",
+    balance: 2500,
+    currency: "LURIS",
     userId: "user_1",
   },
 };
@@ -19,18 +24,8 @@ export async function POST(request: NextRequest) {
       return errorResponse("User ID required", 400);
     }
 
-    // Get or create wallet
-    const walletKey = `${userId}_wallet`;
-    if (!walletDatabase[walletKey]) {
-      walletDatabase[walletKey] = {
-        userId,
-        balance: 0,
-        currency: "USD",
-        createdAt: new Date().toISOString(),
-      };
-    }
-
-    const wallet = walletDatabase[walletKey];
+      // Get or create wallet
+      const wallet = getOrCreateWallet(userId);
 
     if (action === "getBalance") {
       return successResponse(
@@ -41,23 +36,53 @@ export async function POST(request: NextRequest) {
         "Balance retrieved"
       );
     } else if (action === "addFunds") {
+      // If using Stripe, create a checkout session instead of immediate top-up
+      if (paymentMethod === "stripe") {
+        if (!amount || amount <= 0) {
+          return errorResponse("Invalid amount", 400);
+        }
+
+        // Use admin config conversion rate to compute LURIS
+        const conversionRate = adminDatabase.paymentSettings.luris.conversionRate || 0.1; // USD per LURIS
+        const lurisAmount = Math.floor(amount / conversionRate);
+
+        const session = await stripe.checkout.sessions.create({
+          payment_method_types: ["card"],
+          mode: "payment",
+          line_items: [
+            {
+              price_data: {
+                currency: "usd",
+                product_data: {
+                  name: `Purchase ${lurisAmount} LURIS`,
+                },
+                unit_amount: Math.round(amount * 100),
+              },
+              quantity: 1,
+            },
+          ],
+          success_url: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/?checkout=success`,
+          cancel_url: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/?checkout=cancel`,
+          metadata: {
+            userId,
+            lurisAmount: lurisAmount.toString(),
+            usdAmount: amount.toString(),
+          },
+        });
+
+        return successResponse({ sessionUrl: session.url, sessionId: session.id }, "Checkout created", 201);
+      }
+
+      // Legacy / non-Stripe flow: directly add LURIS amount (amount interpreted as LURIS)
       if (amount <= 0) {
         return errorResponse("Invalid amount", 400);
       }
 
-      wallet.balance += amount;
+      const result = addFundsToWallet(userId, amount, { description, paymentMethod });
       return successResponse(
         {
-          balance: wallet.balance,
-          transaction: {
-            id: `tx_${Date.now()}`,
-            type: "topup",
-            amount,
-            description: description || "Wallet top-up",
-            paymentMethod: paymentMethod || "stripe",
-            status: "completed",
-            createdAt: new Date().toISOString(),
-          },
+          balance: result.wallet.balance,
+          transaction: result.tx,
         },
         "Funds added successfully"
       );
@@ -104,13 +129,7 @@ export async function GET(request: NextRequest) {
       return errorResponse("User ID required", 400);
     }
 
-    const walletKey = `${userId}_wallet`;
-    const wallet = walletDatabase[walletKey] || {
-      userId,
-      balance: 0,
-      currency: "USD",
-    };
-
+    const wallet = getOrCreateWallet(userId);
     return successResponse(wallet, "Wallet retrieved");
   } catch (error) {
     return errorResponse("Internal server error", 500);

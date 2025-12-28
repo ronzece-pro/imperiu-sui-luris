@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { mockDatabase } from "@/lib/db/config";
 import { validateAdminCredentials, getAdminConfig } from "@/lib/admin/persistence";
-import { createToken } from "@/lib/auth/utils";
+import { createToken, hashPassword, verifyPassword } from "@/lib/auth/utils";
 import { successResponse, errorResponse } from "@/lib/api/response";
 
 export async function POST(request: NextRequest) {
@@ -15,8 +15,14 @@ export async function POST(request: NextRequest) {
       if (existingUser) {
         return errorResponse("User already exists", 409);
       }
+      // Password is required for registration
+      if (!body.password || body.password.length < 6) {
+        return errorResponse("Password is required and must be at least 6 characters", 400);
+      }
 
-      // Create new user
+      // Create new user with hashed password
+      const passwordHash = hashPassword(body.password);
+
       const newUser = {
         id: `user_${Date.now()}`,
         email,
@@ -27,6 +33,7 @@ export async function POST(request: NextRequest) {
         totalLandArea: 0,
         totalFunds: 0,
         documentCount: 0,
+        passwordHash,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -61,14 +68,18 @@ export async function POST(request: NextRequest) {
           "Admin login successful"
         );
       }
-
       // Find regular user by email
       const user = mockDatabase.users.find((u) => u.email === email);
       if (!user) {
         return errorResponse("Invalid email or password", 401);
       }
 
-      // In production, verify password hash
+      // Verify password
+      const isValid = verifyPassword(password, (user as any).passwordHash || "");
+      if (!isValid) {
+        return errorResponse("Invalid email or password", 401);
+      }
+
       const token = createToken(user.id, user.email);
       return successResponse(
         {
