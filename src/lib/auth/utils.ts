@@ -1,25 +1,21 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
 
-// Simple JWT token utility (in production, use jsonwebtoken library)
+const JWT_SECRET = process.env.JWT_SECRET || "dev_jwt_secret";
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "24h";
+
 export function createToken(userId: string, email: string): string {
-  // For development, this is a simple base64 encoded token
-  const payload = JSON.stringify({
-    userId,
-    email,
-    iat: Date.now(),
-    exp: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
-  });
-  return Buffer.from(payload).toString("base64");
+  const payload = { userId, email };
+  // Cast types to satisfy TypeScript definitions
+  return jwt.sign(payload, JWT_SECRET as string, { expiresIn: JWT_EXPIRES_IN as any });
 }
 
 export function verifyToken(token: string): { userId: string; email: string } | null {
   try {
-    const payload = JSON.parse(Buffer.from(token, "base64").toString("utf-8"));
-    if (payload.exp < Date.now()) {
-      return null;
-    }
-    return { userId: payload.userId, email: payload.email };
-  } catch {
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; email: string };
+    return { userId: decoded.userId, email: decoded.email };
+  } catch (err) {
     return null;
   }
 }
@@ -33,10 +29,13 @@ export function getAuthTokenFromRequest(request: NextRequest): string | null {
 }
 
 export function hashPassword(password: string): string {
-  // In production, use bcrypt
-  return Buffer.from(password).toString("base64");
+  return bcrypt.hashSync(password, 8);
 }
 
 export function verifyPassword(password: string, hash: string): boolean {
-  return hashPassword(password) === hash;
+  try {
+    return bcrypt.compareSync(password, hash);
+  } catch {
+    return false;
+  }
 }

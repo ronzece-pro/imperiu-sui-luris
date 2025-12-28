@@ -13,6 +13,8 @@ export const mockDatabase = {
       username: "citizen_test",
       fullName: "Test Citizen",
       country: "Romania",
+      // default dev password: 'password123' (hashed)
+      passwordHash: require("bcryptjs").hashSync("password123", 8),
       citizenship: "active",
       totalLandArea: 2500,
       totalFunds: 5000,
@@ -27,6 +29,7 @@ export const mockDatabase = {
       fullName: "State Administrator",
       country: "Imperiul Sui Luris",
       citizenship: "active",
+      passwordHash: require("bcryptjs").hashSync("adminpass", 8),
       createdAt: new Date("2023-01-01"),
       updatedAt: new Date(),
     },
