@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import Link from "next/link";
+import WalletPanel from "@/components/wallet/WalletPanel";
 
 interface UserProfile {
   id: string;
@@ -257,7 +258,7 @@ export default function ProfilePage() {
           {/* Tabs */}
           <div className="mb-6 md:mb-8">
             <div className="flex gap-2 sm:gap-4 border-b border-slate-700 overflow-x-auto">
-              {["overview", "documents", "properties", "settings"].map((tab) => (
+              {["overview", "documents", "properties", "wallet", "settings"].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -270,6 +271,7 @@ export default function ProfilePage() {
                   {tab === "overview" && "📊 Prezentare"}
                   {tab === "documents" && "📄 Documente"}
                   {tab === "properties" && "🏠 Proprietăți"}
+                  {tab === "wallet" && "💰 Portofel"}
                   {tab === "settings" && "⚙️ Setări"}
                 </button>
               ))}
@@ -530,6 +532,11 @@ export default function ProfilePage() {
               )}
             </div>
           )}
+          {/* Wallet Tab */}
+          {activeTab === "wallet" && (
+            <WalletPanel />
+          )}
+    
         </div>
       </div>
     </>
