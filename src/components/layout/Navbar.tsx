@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 export default function Header() {
@@ -44,8 +45,13 @@ export default function Header() {
         <div className="flex justify-between items-center h-14 sm:h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2 group flex-shrink-0">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-xs sm:text-sm">
-              ISL
+            <div className="relative w-7 h-7 sm:w-8 sm:h-8">
+              <Image
+                src="/stema.png"
+                alt="Stema Imperiul Sui Luris"
+                fill
+                className="object-contain hover:scale-110 transition-transform duration-300"
+              />
             </div>
             <span className="text-white font-bold text-sm sm:text-lg hidden sm:inline group-hover:text-blue-400 transition whitespace-nowrap">
               Imperiul Sui Luris
