@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -8,12 +8,33 @@ export default function Header() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userMenu, setUserMenu] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
+  const [userName, setUserName] = useState("");
   const router = useRouter();
+
+  useEffect(() => {
+    // Check if user is logged in by looking at localStorage
+    const token = localStorage.getItem("token");
+    const user = localStorage.getItem("user");
+    
+    if (token && user) {
+      setIsLoggedIn(true);
+      try {
+        const userData = JSON.parse(user);
+        setUserName(userData.name || userData.email || "Utilizator");
+      } catch {
+        setUserName("Utilizator");
+      }
+    } else {
+      setIsLoggedIn(false);
+    }
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     setIsLoggedIn(false);
     setUserMenu(false);
+    setMobileMenu(false);
     router.push("/");
   };
 
@@ -67,30 +88,33 @@ export default function Header() {
               <div className="relative">
                 <button
                   onClick={() => setUserMenu(!userMenu)}
-                  className="px-3 lg:px-4 py-2 text-xs lg:text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
+                  className="flex items-center gap-2 px-2 sm:px-3 lg:px-4 py-2 text-xs lg:text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
                 >
-                  Profil
+                  <div className="w-6 h-6 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-xs">
+                    {userName.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="hidden sm:inline">{userName.split(" ")[0]}</span>
                 </button>
                 {userMenu && (
-                  <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-lg py-2">
+                  <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-lg py-2 z-50">
                     <Link
                       href="/dashboard"
                       className="block px-4 py-2 text-sm text-gray-300 hover:bg-slate-700 hover:text-white"
                     >
-                      Dashboard
+                      📊 Dashboard
                     </Link>
                     <Link
                       href="/profile"
                       className="block px-4 py-2 text-sm text-gray-300 hover:bg-slate-700 hover:text-white"
                     >
-                      Profilul meu
+                      👤 Profilul meu
                     </Link>
                     <hr className="my-2 border-slate-700" />
                     <button
                       onClick={handleLogout}
                       className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-slate-700 hover:text-white"
                     >
-                      Ieșire
+                      🚪 Ieșire
                     </button>
                   </div>
                 )}
@@ -159,18 +183,28 @@ export default function Header() {
               </div>
             ) : (
               <div className="space-y-2 px-4">
+                <div className="py-2 text-center">
+                  <p className="text-sm text-gray-300">👤 {userName}</p>
+                </div>
                 <Link
-                  href="/profile"
-                  className="block px-4 py-2 text-sm text-gray-300 hover:text-white text-center"
+                  href="/dashboard"
+                  className="block px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-slate-700/50 rounded text-center"
                   onClick={() => setMobileMenu(false)}
                 >
-                  Profilul meu
+                  📊 Dashboard
+                </Link>
+                <Link
+                  href="/profile"
+                  className="block px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-slate-700/50 rounded text-center"
+                  onClick={() => setMobileMenu(false)}
+                >
+                  👤 Profilul meu
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="w-full px-4 py-2 text-sm text-gray-300 hover:text-white text-center"
+                  className="w-full px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-red-700/50 rounded text-center"
                 >
-                  Ieșire
+                  🚪 Ieșire
                 </button>
               </div>
             )}
