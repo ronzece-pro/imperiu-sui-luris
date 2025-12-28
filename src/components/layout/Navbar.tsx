@@ -94,12 +94,10 @@ export default function Header() {
               <div className="relative">
                 <button
                   onClick={() => setUserMenu(!userMenu)}
-                  className="flex items-center gap-2 px-2 sm:px-3 lg:px-4 py-2 text-xs lg:text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
+                  className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-bold text-sm transition group"
+                  title={userName}
                 >
-                  <div className="w-6 h-6 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-xs">
-                    {userName.charAt(0).toUpperCase()}
-                  </div>
-                  <span className="hidden sm:inline">{userName.split(" ")[0]}</span>
+                  {userName.charAt(0).toUpperCase()}
                 </button>
                 {userMenu && (
                   <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-lg py-2 z-50">

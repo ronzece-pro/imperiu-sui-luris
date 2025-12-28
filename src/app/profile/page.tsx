@@ -9,12 +9,12 @@ interface UserProfile {
   id: string;
   name: string;
   email: string;
-  role: string;
-  joinDate: string;
-  country: string;
-  status: string;
-  avatar: string;
-  isPrivate: boolean;
+  role?: string;
+  joinDate?: string;
+  country?: string;
+  status?: string;
+  avatar?: string;
+  isPrivate?: boolean;
 }
 
 interface Document {
@@ -49,12 +49,20 @@ export default function ProfilePage() {
   useEffect(() => {
     const fetchProfile = async () => {
       const token = localStorage.getItem("token");
+      const userStr = localStorage.getItem("user");
+      
       if (!token) {
         router.push("/auth/login");
         return;
       }
 
       try {
+        // Use stored user data as fallback
+        let userData: UserProfile | null = null;
+        if (userStr) {
+          userData = JSON.parse(userStr);
+        }
+
         const response = await fetch("/api/users", {
           method: "GET",
           headers: {
@@ -65,18 +73,33 @@ export default function ProfilePage() {
 
         const data = await response.json();
 
-        if (data.success) {
+        if (data.success && data.data.user) {
           setUser(data.data.user);
           setDocuments(data.data.documents || []);
           setProperties(data.data.properties || []);
           setEditName(data.data.user.name);
           setEditEmail(data.data.user.email);
+        } else if (userData) {
+          // Fallback to localStorage data
+          setUser(userData);
+          setEditName(userData.name);
+          setEditEmail(userData.email);
+          setDocuments([]);
+          setProperties([]);
         } else {
           router.push("/auth/login");
         }
       } catch (error) {
         console.error("Error fetching profile:", error);
-        router.push("/auth/login");
+        // Try to use localStorage data as fallback
+        if (userStr) {
+          const userData = JSON.parse(userStr);
+          setUser(userData);
+          setEditName(userData.name);
+          setEditEmail(userData.email);
+        } else {
+          router.push("/auth/login");
+        }
       } finally {
         setLoading(false);
       }
@@ -156,6 +179,12 @@ export default function ProfilePage() {
 
   const totalLandArea = properties.reduce((sum, prop) => sum + prop.area, 0);
   const totalDocuments = documents.length;
+  
+  // Provide defaults for user properties
+  const userRole = user?.role || "Cetățean";
+  const userCountry = user?.country || "Imperiul Sui Luris";
+  const userJoinDate = user?.joinDate || new Date().toISOString();
+  const userIsPrivate = user?.isPrivate ?? false;
 
   return (
     <>
@@ -172,19 +201,19 @@ export default function ProfilePage() {
                 <div>
                   <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white">{user.name}</h1>
                   <p className="text-sm sm:text-base text-gray-400">{user.email}</p>
-                  <p className="text-xs sm:text-sm text-cyan-300 mt-1">Membru din {new Date(user.joinDate).toLocaleDateString("ro-RO")}</p>
+                  <p className="text-xs sm:text-sm text-cyan-300 mt-1">Membru din {new Date(userJoinDate).toLocaleDateString("ro-RO")}</p>
                 </div>
               </div>
               <div className="flex gap-2 w-full sm:w-auto">
                 <button
                   onClick={handlePrivacyToggle}
                   className={`flex-1 sm:flex-none px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm transition ${
-                    user.isPrivate
+                    userIsPrivate
                       ? "bg-red-600 hover:bg-red-700 text-white"
                       : "bg-green-600 hover:bg-green-700 text-white"
                   }`}
                 >
-                  {user.isPrivate ? "🔒 Privat" : "🌍 Public"}
+                  {userIsPrivate ? "🔒 Privat" : "🌍 Public"}
                 </button>
                 <button
                   onClick={() => setIsEditing(!isEditing)}
@@ -217,7 +246,7 @@ export default function ProfilePage() {
                 <p className="text-xs sm:text-sm text-gray-400">Proprietăți</p>
               </div>
               <div className="bg-white bg-opacity-5 rounded-lg p-3 sm:p-4 text-center">
-                <p className="text-lg sm:text-2xl font-bold text-cyan-300">{user.role}</p>
+                <p className="text-lg sm:text-2xl font-bold text-cyan-300">{userRole}</p>
                 <p className="text-xs sm:text-sm text-gray-400">Rol</p>
               </div>
             </div>
@@ -256,17 +285,17 @@ export default function ProfilePage() {
                     <p className="text-white font-semibold">{user.name}</p>
                   </div>
                   <div>
-                    <p className="text-gray-400">Email</p>
+                    <p className="text-sm sm:text-base text-gray-400">Email</p>
                     <p className="text-white font-semibold break-all">{user.email}</p>
                   </div>
                   <div>
                     <p className="text-gray-400">Țară</p>
-                    <p className="text-white font-semibold">{user.country}</p>
+                    <p className="text-white font-semibold">{userCountry}</p>
                   </div>
                   <div>
                     <p className="text-gray-400">Statut Profil</p>
-                    <p className={`font-semibold ${user.isPrivate ? "text-red-400" : "text-green-400"}`}>
-                      {user.isPrivate ? "Privat" : "Public"}
+                    <p className={`font-semibold ${userIsPrivate ? "text-red-400" : "text-green-400"}`}>
+                      {userIsPrivate ? "Privat" : "Public"}
                     </p>
                   </div>
                 </div>
