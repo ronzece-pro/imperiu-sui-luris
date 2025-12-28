@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { mockDatabase } from "@/lib/db/config";
-import { adminDatabase } from "@/lib/admin/config";
+import { validateAdminCredentials, getAdminConfig } from "@/lib/admin/persistence";
 import { createToken } from "@/lib/auth/utils";
 import { successResponse, errorResponse } from "@/lib/api/response";
 
@@ -44,13 +44,14 @@ export async function POST(request: NextRequest) {
       );
     } else if (action === "login") {
       // Check if it's admin owner login
-      if (email === adminDatabase.owner.email && password === adminDatabase.owner.password) {
-        const token = createToken(adminDatabase.owner.id, adminDatabase.owner.email);
+      if (validateAdminCredentials(email, password)) {
+        const adminConfig = getAdminConfig();
+        const token = createToken(adminConfig.owner.id, adminConfig.owner.email);
         return successResponse(
           {
             user: {
-              id: adminDatabase.owner.id,
-              email: adminDatabase.owner.email,
+              id: adminConfig.owner.id,
+              email: adminConfig.owner.email,
               name: "Owner Admin",
               role: "admin",
               citizenship: "owner",

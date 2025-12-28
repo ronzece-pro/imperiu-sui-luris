@@ -33,7 +33,13 @@ export default function LoginPage() {
       if (data.success) {
         localStorage.setItem("token", data.data.token);
         localStorage.setItem("user", JSON.stringify(data.data.user));
-        router.push("/dashboard");
+        
+        // Redirect admin to admin panel
+        if (data.data.user?.role === "admin" || data.data.user?.email === "admin@imperiul-sui-luris.com") {
+          router.push("/admin");
+        } else {
+          router.push("/dashboard");
+        }
       } else {
         setError(data.error || "Login failed");
       }
