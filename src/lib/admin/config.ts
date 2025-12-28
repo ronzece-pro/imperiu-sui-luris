@@ -4,7 +4,7 @@ export const adminDatabase = {
   owner: {
     id: "admin_owner",
     email: "admin@imperiul-sui-luris.com",
-    password: "hashed_owner_password_change_me",
+    password: "test1",
     role: "owner",
     permissions: [
       "manage_users",

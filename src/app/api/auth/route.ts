@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { mockDatabase } from "@/lib/db/config";
-import { createToken, hashPassword } from "@/lib/auth/utils";
+import { adminDatabase } from "@/lib/admin/config";
+import { createToken } from "@/lib/auth/utils";
 import { successResponse, errorResponse } from "@/lib/api/response";
 
 export async function POST(request: NextRequest) {
@@ -42,7 +43,25 @@ export async function POST(request: NextRequest) {
         201
       );
     } else if (action === "login") {
-      // Find user by email
+      // Check if it's admin owner login
+      if (email === adminDatabase.owner.email && password === adminDatabase.owner.password) {
+        const token = createToken(adminDatabase.owner.id, adminDatabase.owner.email);
+        return successResponse(
+          {
+            user: {
+              id: adminDatabase.owner.id,
+              email: adminDatabase.owner.email,
+              name: "Owner Admin",
+              role: "admin",
+              citizenship: "owner",
+            },
+            token,
+          },
+          "Admin login successful"
+        );
+      }
+
+      // Find regular user by email
       const user = mockDatabase.users.find((u) => u.email === email);
       if (!user) {
         return errorResponse("Invalid email or password", 401);
@@ -59,6 +78,7 @@ export async function POST(request: NextRequest) {
             fullName: user.fullName,
             citizenship: user.citizenship,
             createdAt: user.createdAt,
+            role: "user",
           },
           token,
         },
