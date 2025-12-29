@@ -8,6 +8,7 @@ import {
   createMessage,
   deleteMessage,
   getOrCreatePrivateRoom,
+  markRoomRead,
   listRoomMessages,
   validateAndNormalizeMessageInput,
 } from "@/lib/chat/persistence";
@@ -53,6 +54,9 @@ export async function GET(request: NextRequest) {
     const viewer = mockDatabase.users.find((u) => u.id === authed.decoded.userId);
     const viewerIsAdmin = viewer?.role === "admin" || viewer?.id === "user_admin";
     const messages = listRoomMessages(room.id, Boolean(viewerIsAdmin));
+
+    // mark as read for notifications
+    markRoomRead(authed.decoded.userId, room.id);
 
     return successResponse({ room, messages: enrichMessages(messages).slice(-200) });
   } catch {

@@ -35,3 +35,9 @@ export interface ChatMessage {
   blockedAt?: Date;
   blockedByUserId?: string;
 }
+
+export interface ChatRoomRead {
+  userId: string;
+  roomId: string;
+  lastReadAt: Date;
+}

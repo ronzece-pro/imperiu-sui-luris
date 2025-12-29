@@ -6,6 +6,7 @@ import { errorResponse, successResponse } from "@/lib/api/response";
 import {
   cleanupChatMessages,
   createMessage,
+  deleteMessage,
   getGlobalRoom,
   listRoomMessages,
   validateAndNormalizeMessageInput,
@@ -83,6 +84,40 @@ export async function POST(request: NextRequest) {
     });
 
     return successResponse({ message: enrichMessages([msg])[0] }, "Message sent", 201);
+  } catch {
+    return errorResponse("Internal server error", 500);
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const authed = requireAuthenticatedUser(request);
+    if (!authed.ok) return authed.response;
+
+    if (!requireVerifiedUser(authed.decoded.userId)) {
+      return errorResponse("Doar utilizatorii verificați pot folosi chat-ul global", 403);
+    }
+
+    const { searchParams } = new URL(request.url);
+    const messageId = (searchParams.get("messageId") || "").trim();
+    if (!messageId) return errorResponse("messageId is required", 400);
+
+    cleanupChatMessages();
+    const room = getGlobalRoom();
+    const msg = mockDatabase.chatMessages.find((m) => m.id === messageId);
+    if (!msg || msg.roomId !== room.id || msg.roomType !== "global") {
+      return errorResponse("Message not found", 404);
+    }
+
+    const viewer = mockDatabase.users.find((u) => u.id === authed.decoded.userId);
+    const viewerIsAdmin = viewer?.role === "admin" || viewer?.id === "user_admin";
+    if (!viewerIsAdmin && msg.senderId !== authed.decoded.userId) {
+      return errorResponse("Forbidden", 403);
+    }
+
+    const ok = deleteMessage(messageId);
+    if (!ok) return errorResponse("Message not found", 404);
+    return successResponse({ id: messageId }, "Message deleted");
   } catch {
     return errorResponse("Internal server error", 500);
   }

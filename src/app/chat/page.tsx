@@ -65,8 +65,12 @@ export default function ChatPage() {
 
   const [room, setRoom] = useState<ChatRoom | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string>("");
+
+  const [privateUnreadByUserId, setPrivateUnreadByUserId] = useState<Record<string, number>>({});
+  const [privateTotalUnread, setPrivateTotalUnread] = useState(0);
 
   const [text, setText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -138,8 +142,45 @@ export default function ChatPage() {
     let timer: any;
 
     const load = async () => {
-      setLoading(true);
-      setError("");
+      try {
+        const res = await fetch("/api/chat/notifications", { headers: { Authorization: `Bearer ${token}` } });
+        const json = await res.json();
+        if (!res.ok || !json?.success) return;
+        if (cancelled) return;
+        const unreadByUserId = (json.data?.unreadByUserId || {}) as Record<string, number>;
+        const totalUnread = Number(json.data?.totalUnread || 0);
+        setPrivateUnreadByUserId(unreadByUserId);
+        setPrivateTotalUnread(totalUnread);
+      } catch {
+        // ignore
+      }
+    };
+
+    void load();
+    timer = setInterval(load, 4000);
+    return () => {
+      cancelled = true;
+      if (timer) clearInterval(timer);
+    };
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+
+    let cancelled = false;
+    let timer: any;
+
+    let inFlight = false;
+
+    const load = async (silent: boolean) => {
+      if (inFlight) return;
+      inFlight = true;
+      if (silent) {
+        setRefreshing(true);
+      } else {
+        setInitialLoading(true);
+        setError("");
+      }
       try {
         const url = selectedUserId
           ? `/api/chat/private?withUserId=${encodeURIComponent(selectedUserId)}`
@@ -149,7 +190,7 @@ export default function ChatPage() {
         const json = await res.json();
 
         if (!res.ok || !json?.success) {
-          if (!cancelled) {
+          if (!cancelled && !silent) {
             setRoom(null);
             setMessages([]);
             setError(json?.message || json?.error || "Nu s-a putut încărca chat-ul");
@@ -162,15 +203,19 @@ export default function ChatPage() {
           setMessages((json.data?.messages || []) as ChatMessage[]);
         }
       } catch {
-        if (!cancelled) setError("Eroare de rețea");
+        if (!cancelled && !silent) setError("Eroare de rețea");
       } finally {
-        if (!cancelled) setLoading(false);
+        inFlight = false;
+        if (!cancelled) {
+          if (silent) setRefreshing(false);
+          else setInitialLoading(false);
+        }
       }
     };
 
     const poll = async () => {
-      await load();
-      timer = setInterval(load, 2500);
+      await load(false);
+      timer = setInterval(() => void load(true), 2500);
     };
 
     void poll();
@@ -187,11 +232,26 @@ export default function ChatPage() {
   const openPrivate = (userId: string) => {
     setSelectedUserId(userId);
     router.push(`/chat?withUserId=${encodeURIComponent(userId)}`);
+
+    // optimistic: clear unread badge for that user (server will also mark read on GET)
+    setPrivateUnreadByUserId((prev) => {
+      if (!prev[userId]) return prev;
+      const next = { ...prev };
+      delete next[userId];
+      return next;
+    });
   };
 
   const openGlobal = () => {
     setSelectedUserId(null);
     router.push("/chat");
+  };
+
+  const openFirstUnread = () => {
+    const entries = Object.entries(privateUnreadByUserId).sort((a, b) => b[1] - a[1]);
+    const first = entries[0]?.[0];
+    if (first) openPrivate(first);
+    else router.push("/chat");
   };
 
   const onPickFiles = async (evt: React.ChangeEvent<HTMLInputElement>) => {
@@ -263,6 +323,24 @@ export default function ChatPage() {
     }
   };
 
+  const deleteOwnGlobalMessage = async (messageId: string) => {
+    if (!token) return;
+    try {
+      const res = await fetch(`/api/chat/global?messageId=${encodeURIComponent(messageId)}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.success) {
+        setError(json?.message || json?.error || "Nu s-a putut șterge mesajul");
+        return;
+      }
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
+    } catch {
+      setError("Eroare de rețea");
+    }
+  };
+
   const setTimer = async (autoDeleteSeconds: number | null) => {
     if (!token || !selectedUserId) return;
     try {
@@ -302,6 +380,22 @@ export default function ChatPage() {
                 </button>
               </div>
 
+              <div className="mt-3 flex items-center justify-between">
+                <div className="text-xs text-gray-400">Mesaje private</div>
+                <button
+                  onClick={openFirstUnread}
+                  className="relative px-2 py-1 rounded border bg-black/20 border-white/10 text-gray-200 hover:bg-white/5"
+                  title="Notificări"
+                >
+                  <span className="text-sm">🔔</span>
+                  {privateTotalUnread > 0 && (
+                    <span className="absolute -top-2 -right-2 text-[10px] leading-none px-1.5 py-1 rounded-full bg-red-600 text-white">
+                      {privateTotalUnread}
+                    </span>
+                  )}
+                </button>
+              </div>
+
               <div className="mt-3">
                 <input
                   value={userQuery}
@@ -324,8 +418,13 @@ export default function ChatPage() {
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="font-medium truncate">{u.name}</div>
-                      <div className="text-xs text-gray-300">
-                        {u.isVerified ? "verificat" : "ne-verificat"}
+                      <div className="flex items-center gap-2">
+                        {privateUnreadByUserId[u.id] ? (
+                          <span className="text-[10px] leading-none px-2 py-1 rounded-full bg-red-600 text-white">
+                            {privateUnreadByUserId[u.id]}
+                          </span>
+                        ) : null}
+                        <div className="text-xs text-gray-300">{u.isVerified ? "verificat" : "ne-verificat"}</div>
                       </div>
                     </div>
                   </button>
@@ -370,9 +469,7 @@ export default function ChatPage() {
                 className="p-4 space-y-3 max-h-[60vh] overflow-auto select-none"
                 onContextMenu={(e) => e.preventDefault()}
               >
-                {loading ? (
-                  <div className="text-gray-400">Se încarcă...</div>
-                ) : error ? (
+                {error ? (
                   <div className="text-red-400">{error}</div>
                 ) : (
                   messages.map((m) => {
@@ -410,10 +507,12 @@ export default function ChatPage() {
                             </div>
                           )}
 
-                          {isPrivate && mine && (
+                          {((isPrivate && mine) || (!isPrivate && mine)) && (
                             <div className="mt-2">
                               <button
-                                onClick={() => void deleteOwnPrivateMessage(m.id)}
+                                onClick={() =>
+                                  void (isPrivate ? deleteOwnPrivateMessage(m.id) : deleteOwnGlobalMessage(m.id))
+                                }
                                 className="text-xs text-red-300 hover:text-red-200"
                               >
                                 Șterge mesajul
@@ -425,6 +524,10 @@ export default function ChatPage() {
                     );
                   })
                 )}
+                {initialLoading && messages.length === 0 ? (
+                  <div className="text-gray-400">Se încarcă...</div>
+                ) : null}
+                {refreshing ? <div className="text-[10px] text-gray-500">Sincronizez…</div> : null}
                 <div ref={bottomRef} />
               </div>
 

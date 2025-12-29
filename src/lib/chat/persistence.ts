@@ -166,3 +166,46 @@ export function listRoomMessages(roomId: string, viewerIsAdmin: boolean) {
     } satisfies ChatMessage;
   });
 }
+
+export function markRoomRead(userId: string, roomId: string) {
+  const existing = mockDatabase.chatReads.find((r) => r.userId === userId && r.roomId === roomId);
+  if (existing) {
+    existing.lastReadAt = new Date();
+    return existing;
+  }
+  const row = { userId, roomId, lastReadAt: new Date() };
+  mockDatabase.chatReads.push(row);
+  return row;
+}
+
+export function getPrivateUnreadCounts(userId: string) {
+  cleanupChatMessages();
+  const byUserId = new Map<string, number>();
+
+  const rooms = mockDatabase.chatRooms.filter((r) => r.type === "private" && (r.participantIds || []).includes(userId));
+  for (const room of rooms) {
+    const participantIds = room.participantIds || [];
+    const otherUserId = participantIds.find((id) => id !== userId);
+    if (!otherUserId) continue;
+
+    const lastReadAt = mockDatabase.chatReads.find((rr) => rr.userId === userId && rr.roomId === room.id)?.lastReadAt;
+    const lastReadMs = lastReadAt ? new Date(lastReadAt).getTime() : 0;
+
+    const unread = mockDatabase.chatMessages.filter((m) => {
+      if (m.roomId !== room.id) return false;
+      if (m.senderId === userId) return false;
+      const createdMs = new Date(m.createdAt).getTime();
+      return createdMs > lastReadMs;
+    }).length;
+
+    if (unread > 0) byUserId.set(otherUserId, unread);
+  }
+
+  let totalUnread = 0;
+  for (const c of byUserId.values()) totalUnread += c;
+
+  return {
+    totalUnread,
+    unreadByUserId: Object.fromEntries(byUserId.entries()),
+  };
+}
