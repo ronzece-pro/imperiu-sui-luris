@@ -43,7 +43,7 @@ export default function AdminVerificationRequests() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [message, setMessage] = useState<string>("");
   const [messageKind, setMessageKind] = useState<"success" | "error">("success");
-  const [lightbox, setLightbox] = useState<{ src: string; title: string } | null>(null);
+  const [lightbox, setLightbox] = useState<{ src: string; title: string; downloadName: string } | null>(null);
   const [activeTab, setActiveTab] = useState<VerificationStatus>("pending");
 
   const pending = useMemo(() => requests.filter((r) => r.status === "pending"), [requests]);
@@ -162,16 +162,28 @@ export default function AdminVerificationRequests() {
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
               <div className="text-sm text-gray-200 truncate">{lightbox.title}</div>
-              <button
-                className="text-sm text-gray-200 hover:text-white"
-                onClick={() => setLightbox(null)}
-              >
-                Închide
-              </button>
+              <div className="flex items-center gap-3">
+                <a
+                  href={lightbox.src}
+                  download={lightbox.downloadName}
+                  className="text-sm text-gray-200 hover:text-white"
+                >
+                  Descarcă
+                </a>
+                <button className="text-sm text-gray-200 hover:text-white" onClick={() => setLightbox(null)}>
+                  Închide
+                </button>
+              </div>
             </div>
             <div className="p-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={lightbox.src} alt={lightbox.title} className="w-full h-auto rounded-lg" />
+              <div className="w-full max-h-[78vh] overflow-auto">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={lightbox.src}
+                  alt={lightbox.title}
+                  className="w-full h-auto max-h-[78vh] object-contain rounded-lg"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -257,7 +269,13 @@ export default function AdminVerificationRequests() {
                             <button
                               type="button"
                               className="w-10 h-10 rounded border border-gray-700 overflow-hidden"
-                              onClick={() => setLightbox({ src: selfie.dataUrl, title: "Selfie" })}
+                              onClick={() =>
+                                setLightbox({
+                                  src: selfie.dataUrl,
+                                  title: `Selfie (${r.user?.fullName || r.userId})`,
+                                  downloadName: `selfie_${r.userId}_${r.id}.jpg`,
+                                })
+                              }
                               title="Selfie"
                             >
                               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -274,7 +292,13 @@ export default function AdminVerificationRequests() {
                             <button
                               type="button"
                               className="w-10 h-10 rounded border border-gray-700 overflow-hidden"
-                              onClick={() => setLightbox({ src: doc.dataUrl, title: "Document" })}
+                              onClick={() =>
+                                setLightbox({
+                                  src: doc.dataUrl,
+                                  title: `Document (${r.user?.fullName || r.userId})`,
+                                  downloadName: `document_${r.userId}_${r.id}.jpg`,
+                                })
+                              }
                               title="Document"
                             >
                               {/* eslint-disable-next-line @next/next/no-img-element */}
