@@ -173,29 +173,29 @@ export default function Header() {
             <div className="relative w-7 h-7 sm:w-8 sm:h-8">
               <Image
                 src="/stema.png"
-                alt="Stema Imperiul Sui Luris"
+                alt="Stema Imperiul Sui Juris"
                 fill
                 className="object-contain hover:scale-110 transition-transform duration-300"
               />
             </div>
-            <span className="text-white font-bold text-sm sm:text-lg hidden sm:inline group-hover:text-blue-400 transition whitespace-nowrap">
-              Imperiul Sui Luris
+            <span className="text-white text-sm sm:text-lg hidden sm:inline group-hover:text-blue-400 transition whitespace-nowrap font-[var(--font-brand)] font-semibold uppercase tracking-[0.18em]">
+              IMPERIUL SUI JURIS
             </span>
           </Link>
 
           <div className="hidden md:flex items-center space-x-4 lg:space-x-6">
-            <Link href="/marketplace" className="text-gray-300 hover:text-white transition duration-200 text-sm">
+            <Link href="/marketplace" className="text-gray-300 hover:text-white transition duration-200 text-xs font-semibold uppercase tracking-[0.18em]">
               Piață
             </Link>
-            <Link href="/about" className="text-gray-300 hover:text-white transition duration-200 text-sm">
+            <Link href="/about" className="text-gray-300 hover:text-white transition duration-200 text-xs font-semibold uppercase tracking-[0.18em]">
               Despre
             </Link>
             {isLoggedIn ? (
               <>
-                <Link href="/dashboard" className="text-gray-300 hover:text-white transition duration-200 text-sm">
+                <Link href="/dashboard" className="text-gray-300 hover:text-white transition duration-200 text-xs font-semibold uppercase tracking-[0.18em]">
                   Dashboard
                 </Link>
-                <Link href="/chat" className="text-gray-300 hover:text-white transition duration-200 text-sm">
+                <Link href="/chat" className="text-gray-300 hover:text-white transition duration-200 text-xs font-semibold uppercase tracking-[0.18em]">
                   Chat
                 </Link>
               </>

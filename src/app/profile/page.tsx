@@ -282,7 +282,7 @@ export default function ProfilePage() {
   
   // Provide defaults for user properties
   const userRole = user?.role || "Cetățean";
-  const userCountry = user?.country || "Imperiul Sui Luris";
+  const userCountry = user?.country || "Imperiul Sui Juris";
   const userJoinDate = user?.joinDate || new Date().toISOString();
   const userIsPrivate = user?.isPrivate ?? false;
 

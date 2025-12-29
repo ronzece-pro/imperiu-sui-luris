@@ -53,7 +53,11 @@ export async function GET(request: NextRequest) {
       };
     });
 
-  return successResponse(users);
+  return successResponse(users, "Users retrieved successfully", 200, {
+    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+    Pragma: "no-cache",
+    Expires: "0",
+  });
 }
 
 export async function PUT(request: NextRequest) {

@@ -13,7 +13,7 @@ const initialPages: Record<string, LegalPage> = {
   terms: {
     id: "terms",
     title: "Termeni și Condiții",
-    content: `# Termeni și Condiții - Imperiul Sui Luris
+    content: `# Termeni și Condiții - Imperiul Sui Juris
 
 Ultimă actualizare: ${new Date().toLocaleDateString("ro-RO")}
 
@@ -36,7 +36,7 @@ Ne rezervăm dreptul de a modifica acești termeni oricând.`,
   privacy: {
     id: "privacy",
     title: "Politica de Confidențialitate",
-    content: `# Politica de Confidențialitate - Imperiul Sui Luris
+    content: `# Politica de Confidențialitate - Imperiul Sui Juris
 
 ## Colectarea Datelor
 Colectăm date personale doar cu consimțământul dumneavoastră.
@@ -57,7 +57,7 @@ Pentru întrebări privind confidențialitatea, contactați: privacy@imperiul-su
   rules: {
     id: "rules",
     title: "Reguli de Comunitate",
-    content: `# Reguli de Comunitate - Imperiul Sui Luris
+    content: `# Reguli de Comunitate - Imperiul Sui Juris
 
 ## 1. Respectul
 Tratați alți membri cu respect și curtoazie.
@@ -134,13 +134,12 @@ export default function AdminLegalPages() {
   return (
     <div className="space-y-6">
       {/* Page Selector */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <div className="flex flex-wrap gap-2">
         {Object.keys(pages).map((pageId) => (
           <button
             key={pageId}
             onClick={() => {
               setSelectedPage(pageId);
-              setEditedContent(pages[pageId].content);
               setIsEditing(false);
             }}
             className={`px-4 py-3 rounded-lg font-medium transition text-sm ${

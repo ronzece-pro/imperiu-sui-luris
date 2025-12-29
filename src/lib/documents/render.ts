@@ -37,7 +37,7 @@ export function renderDocumentHtml(params: {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>${title} - Imperiul Sui Luris</title>
+    <title>${title} - Imperiul Sui Juris</title>
     <style>
       :root { color-scheme: dark; }
       body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; background:#070b14; color:#e5e7eb; margin:0; padding:24px; }
@@ -91,7 +91,7 @@ export function renderDocumentHtml(params: {
         <div class="brand">
           <div class="mark" aria-hidden="true"></div>
           <div>
-            <div class="title">IMPERIUL SUI LURIS</div>
+            <div class="title">IMPERIUL SUI JURIS</div>
             <div class="subtitle">Document digital intern · ${docLabel}</div>
           </div>
         </div>
@@ -135,7 +135,7 @@ export function renderDocumentHtml(params: {
 
           <div class="side">
             <div class="lbl">Emitent</div>
-            <div class="val">Platforma Imperiul Sui Luris</div>
+            <div class="val">Platforma Imperiul Sui Juris</div>
 
             <div class="kv"><span class="muted">Nr.</span><strong>${params.documentNumber}</strong></div>
             <div class="kv"><span class="muted">Emis</span><strong>${format(params.issueDate)}</strong></div>

@@ -8,7 +8,7 @@ export interface ApiResponse<T> {
   statusCode: number;
 }
 
-export function successResponse<T>(data: T, message?: string, statusCode = 200): NextResponse {
+export function successResponse<T>(data: T, message?: string, statusCode = 200, headers?: HeadersInit): NextResponse {
   return NextResponse.json(
     {
       success: true,
@@ -16,7 +16,7 @@ export function successResponse<T>(data: T, message?: string, statusCode = 200):
       message: message || "Request successful",
       statusCode,
     },
-    { status: statusCode }
+    { status: statusCode, headers }
   );
 }
 

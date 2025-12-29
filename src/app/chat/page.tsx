@@ -71,6 +71,8 @@ export default function ChatPage() {
   const [token, setToken] = useState<string>("");
   const [me, setMe] = useState<{ id: string; isVerified: boolean } | null>(null);
 
+  const [mobilePane, setMobilePane] = useState<"users" | "chat">("users");
+
   const [users, setUsers] = useState<ChatUser[]>([]);
   const [userQuery, setUserQuery] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -345,11 +347,13 @@ export default function ChatPage() {
   }, [selectedUserId, token]);
 
   useEffect(() => {
+    if (mobilePane !== "chat") return;
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length, selectedUserId]);
+  }, [messages.length, selectedUserId, mobilePane]);
 
   const openPrivate = (userId: string) => {
     setSelectedUserId(userId);
+    setMobilePane("chat");
     router.push(`/chat?withUserId=${encodeURIComponent(userId)}`);
 
     // optimistic: clear unread badge for that user (server will also mark read on GET)
@@ -363,6 +367,7 @@ export default function ChatPage() {
 
   const openGlobal = () => {
     setSelectedUserId(null);
+    setMobilePane("chat");
     router.push("/chat");
   };
 
@@ -591,7 +596,7 @@ export default function ChatPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col lg:flex-row gap-6">
             {/* Sidebar */}
-            <div className="lg:w-80 bg-white bg-opacity-5 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
+            <div className="hidden lg:block lg:w-80 bg-white bg-opacity-5 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-white font-bold">Chat</h2>
                 <button
@@ -685,6 +690,31 @@ export default function ChatPage() {
                   ) : null}
                 </div>
 
+                <div className="lg:hidden flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setMobilePane("chat")}
+                    className={`text-xs px-3 py-1 rounded border ${
+                      mobilePane === "chat"
+                        ? "bg-blue-600 border-blue-700 text-white"
+                        : "bg-black/20 border-white/10 text-gray-200 hover:bg-white/5"
+                    }`}
+                  >
+                    Chat
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMobilePane("users")}
+                    className={`text-xs px-3 py-1 rounded border ${
+                      mobilePane === "users"
+                        ? "bg-blue-600 border-blue-700 text-white"
+                        : "bg-black/20 border-white/10 text-gray-200 hover:bg-white/5"
+                    }`}
+                  >
+                    Utilizatori
+                  </button>
+                </div>
+
                 {isPrivate && (
                   <div className="flex items-center gap-2">
                     <button
@@ -722,8 +752,73 @@ export default function ChatPage() {
                 )}
               </div>
 
+              <div className={`lg:hidden ${mobilePane === "users" ? "block" : "hidden"}`}>
+                <div className="p-4 space-y-3 border-b border-slate-700">
+                  <div className="flex items-center justify-between">
+                    <div className="text-white font-bold">Mesaje</div>
+                    <button
+                      onClick={openGlobal}
+                      className={`text-xs px-3 py-1 rounded border ${
+                        isPrivate ? "bg-gray-800 border-gray-700 text-gray-200 hover:bg-gray-700" : "bg-blue-600 border-blue-700 text-white"
+                      }`}
+                    >
+                      Global
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-gray-400">Mesaje private</div>
+                    <button
+                      onClick={openFirstUnread}
+                      className="relative px-2 py-1 rounded border bg-black/20 border-white/10 text-gray-200 hover:bg-white/5"
+                      title="Notificări"
+                    >
+                      <span className="text-sm">🔔</span>
+                      {privateTotalUnread > 0 && (
+                        <span className="absolute -top-2 -right-2 text-[10px] leading-none px-1.5 py-1 rounded-full bg-red-600 text-white">
+                          {privateTotalUnread}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+
+                  <input
+                    value={userQuery}
+                    onChange={(e) => setUserQuery(e.target.value)}
+                    placeholder="Caută utilizator..."
+                    className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500"
+                  />
+
+                  <div className="space-y-2 max-h-[55vh] overflow-auto">
+                    {filteredUsers.map((u) => (
+                      <button
+                        key={u.id}
+                        onClick={() => openPrivate(u.id)}
+                        className={`w-full text-left px-3 py-2 rounded-lg border transition ${
+                          selectedUserId === u.id
+                            ? "bg-blue-600/30 border-blue-700 text-white"
+                            : "bg-black/20 border-white/10 text-gray-200 hover:bg-white/5"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="font-medium truncate">{u.name}</div>
+                          <div className="flex items-center gap-2">
+                            {privateUnreadByUserId[u.id] ? (
+                              <span className="text-[10px] leading-none px-2 py-1 rounded-full bg-red-600 text-white">
+                                {privateUnreadByUserId[u.id]}
+                              </span>
+                            ) : null}
+                            <div className="text-xs text-gray-300">{u.isVerified ? "verificat" : "ne-verificat"}</div>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
               <div
-                className="p-4 space-y-3 max-h-[60vh] overflow-auto select-none"
+                className={`${mobilePane === "users" ? "hidden" : "block"} lg:block p-4 space-y-3 max-h-[60vh] overflow-auto select-none`}
                 onContextMenu={(e) => e.preventDefault()}
               >
                 {error ? (
@@ -807,7 +902,7 @@ export default function ChatPage() {
                 <div ref={bottomRef} />
               </div>
 
-              <div className="p-4 border-t border-slate-700">
+              <div className={`${mobilePane === "users" ? "hidden" : "block"} lg:block p-4 border-t border-slate-700`}>
                 {isPrivate && privateBlocked && (
                   <div className="mb-3 text-sm text-red-200">
                     Chat blocat. Nu poți trimite mesaje către acest utilizator.

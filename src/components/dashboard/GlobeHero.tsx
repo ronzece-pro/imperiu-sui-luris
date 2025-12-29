@@ -26,7 +26,7 @@ export default function Globe() {
           <div className="relative w-40 sm:w-56 md:w-72 h-40 sm:h-56 md:h-72">
             <Image
               src="/stema.png"
-              alt="Stema Imperiul Sui Luris"
+              alt="Stema Imperiul Sui Juris"
               fill
               priority
               className="drop-shadow-2xl hover:scale-105 transition-transform duration-300 object-contain"
@@ -36,7 +36,7 @@ export default function Globe() {
 
         {/* Title and Motto - Responsive text */}
         <div className="text-center mb-6 sm:mb-8 md:mb-10 px-2">
-          <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-2 sm:mb-4 leading-tight">Imperiul Sui Luris</h1>
+          <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-2 sm:mb-4 leading-tight">IMPERIUL SUI JURIS</h1>
           <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-cyan-300 font-light">Libertate • Fraternitate • Durabilitate</p>
         </div>
 

@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
         id: `land_${Date.now()}`,
         userId: decoded.userId,
         name: item.name,
-        location: `Zona: ${zone}, Imperiul Sui Luris`,
+        location: `Zona: ${zone}, Imperiul Sui Juris`,
         coordinates: {
           latitude: 45.9432,
           longitude: 24.9668,

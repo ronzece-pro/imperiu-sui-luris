@@ -31,6 +31,7 @@ export default function AdminUserManagement({ onClose }: Props) {
   const [savingUserId, setSavingUserId] = useState<string | null>(null);
   const [message, setMessage] = useState<string>("");
   const [messageKind, setMessageKind] = useState<"success" | "error">("success");
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     void fetchUsers();
@@ -47,6 +48,7 @@ export default function AdminUserManagement({ onClose }: Props) {
       }
 
       const response = await fetch("/api/admin/users", {
+        cache: "no-store",
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -96,6 +98,15 @@ export default function AdminUserManagement({ onClose }: Props) {
       setUsers([]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    try {
+      setIsRefreshing(true);
+      await fetchUsers();
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -247,13 +258,23 @@ export default function AdminUserManagement({ onClose }: Props) {
   return (
     <div className="space-y-6">
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-6">
-        <input
-          type="text"
-          placeholder="Căutare după nume sau email..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-        />
+        <div className="flex flex-col sm:flex-row gap-3">
+          <input
+            type="text"
+            placeholder="Căutare după nume sau email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+          />
+          <button
+            type="button"
+            onClick={() => void onRefresh()}
+            disabled={isLoading || isRefreshing}
+            className="bg-gray-800 hover:bg-gray-700 disabled:opacity-50 border border-gray-700 text-gray-200 px-4 py-2 rounded-lg transition-colors"
+          >
+            {isRefreshing ? "Refresh..." : "Refresh"}
+          </button>
+        </div>
       </div>
 
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">

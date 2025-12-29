@@ -45,7 +45,7 @@ export const adminDatabase = {
     terms: {
       title: "Termeni și Condiții",
       content: `
-# Termeni și Condiții - Imperiul Sui Luris
+# Termeni și Condiții - Imperiul Sui Juris
 
 Ultimă actualizare: ${new Date().toLocaleDateString("ro-RO")}
 
@@ -69,7 +69,7 @@ Ne rezervăm dreptul de a modifica acești termeni oricând.
     privacy: {
       title: "Politica de Confidențialitate",
       content: `
-# Politica de Confidențialitate - Imperiul Sui Luris
+# Politica de Confidențialitate - Imperiul Sui Juris
 
 ## Colectarea Datelor
 Colectăm date personale doar cu consimțământul dumneavoastră.
@@ -113,7 +113,7 @@ Vânzările neautorizate sunt interzise.
         {
           id: "q1",
           question: "Ce este Luris?",
-          answer: "Luris este moneda internă a Imperiului Sui Luris, utilizată pentru tranzacții.",
+          answer: "Luris este moneda internă a Imperiului Sui Juris, utilizată pentru tranzacții.",
         },
         {
           id: "q2",
