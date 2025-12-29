@@ -3,7 +3,7 @@
 // For development, we'll use a mock database structure
 
 import bcrypt from "bcryptjs";
-import type { ChatMessage, ChatRoom, ChatRoomRead, Document, MarketplaceItem } from "@/types";
+import type { ChatMessage, ChatPublicKey, ChatReport, ChatRoom, ChatRoomRead, ChatUserBlock, Document, MarketplaceItem } from "@/types";
 
 export const DATABASE_URL = process.env.DATABASE_URL || "postgresql://user:password@localhost:5432/imperiu_sui_luris";
 
@@ -127,6 +127,9 @@ export const mockDatabase = {
   chatRooms: [] as ChatRoom[],
   chatMessages: [] as ChatMessage[],
   chatReads: [] as ChatRoomRead[],
+  chatPublicKeys: [] as ChatPublicKey[],
+  chatUserBlocks: [] as ChatUserBlock[],
+  chatReports: [] as ChatReport[],
   landProperties: [
     {
       id: "land_001",

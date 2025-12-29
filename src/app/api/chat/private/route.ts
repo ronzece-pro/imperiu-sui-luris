@@ -9,9 +9,30 @@ import {
   deleteMessage,
   getOrCreatePrivateRoom,
   markRoomRead,
+  isUserBlocked,
   listRoomMessages,
   validateAndNormalizeMessageInput,
 } from "@/lib/chat/persistence";
+
+function parseEncrypted(body: any) {
+  const enc = body?.encrypted;
+  if (!enc) return null;
+  const v = enc?.v;
+  const algorithm = enc?.algorithm;
+  const iv = enc?.iv;
+  const ciphertext = enc?.ciphertext;
+  if (v !== 1) return { ok: false as const, error: "Unsupported encrypted version" };
+  if (algorithm !== "AES-GCM") return { ok: false as const, error: "Unsupported encryption algorithm" };
+  if (typeof iv !== "string" || typeof ciphertext !== "string") {
+    return { ok: false as const, error: "Invalid encrypted payload" };
+  }
+  // basic size guards (base64 text)
+  if (iv.length < 8 || iv.length > 64) return { ok: false as const, error: "Invalid iv" };
+  if (ciphertext.length < 8 || ciphertext.length > 4 * 1024 * 1024) {
+    return { ok: false as const, error: "Ciphertext too large" };
+  }
+  return { ok: true as const, encrypted: { v: 1 as const, algorithm: "AES-GCM" as const, iv, ciphertext } };
+}
 
 function enrichMessages(messages: any[]) {
   const byId = new Map(mockDatabase.users.map((u) => [u.id, u] as const));
@@ -48,6 +69,8 @@ export async function GET(request: NextRequest) {
     const other = mockDatabase.users.find((u) => u.id === withUserId);
     if (!other || (other as any).accountStatus === "deleted") return errorResponse("User not found", 404);
 
+    const blocked = isUserBlocked(authed.decoded.userId, withUserId);
+
     cleanupChatMessages();
     const room = getOrCreatePrivateRoom(authed.decoded.userId, withUserId);
 
@@ -58,7 +81,7 @@ export async function GET(request: NextRequest) {
     // mark as read for notifications
     markRoomRead(authed.decoded.userId, room.id);
 
-    return successResponse({ room, messages: enrichMessages(messages).slice(-200) });
+    return successResponse({ room, messages: enrichMessages(messages).slice(-200), blocked });
   } catch {
     return errorResponse("Internal server error", 500);
   }
@@ -76,11 +99,30 @@ export async function POST(request: NextRequest) {
     const other = mockDatabase.users.find((u) => u.id === withUserId);
     if (!other || (other as any).accountStatus === "deleted") return errorResponse("User not found", 404);
 
+    if (isUserBlocked(authed.decoded.userId, withUserId)) {
+      return errorResponse("Chat indisponibil: utilizator blocat", 403);
+    }
+
     const body = await request.json();
-    const parsed = validateAndNormalizeMessageInput(body);
-    if (!parsed.ok) return errorResponse(parsed.error, 400);
-    if (!parsed.text.trim() && (!parsed.attachments || parsed.attachments.length === 0)) {
-      return errorResponse("Mesaj gol", 400);
+
+    const encParsed = parseEncrypted(body);
+    let text = "";
+    let attachments: any[] | undefined = undefined;
+    let encrypted: any = undefined;
+
+    if (encParsed) {
+      if (!encParsed.ok) return errorResponse(encParsed.error, 400);
+      encrypted = encParsed.encrypted;
+      text = "[E2E]";
+      attachments = undefined;
+    } else {
+      const parsed = validateAndNormalizeMessageInput(body);
+      if (!parsed.ok) return errorResponse(parsed.error, 400);
+      if (!parsed.text.trim() && (!parsed.attachments || parsed.attachments.length === 0)) {
+        return errorResponse("Mesaj gol", 400);
+      }
+      text = parsed.text;
+      attachments = parsed.attachments;
     }
 
     cleanupChatMessages();
@@ -89,8 +131,9 @@ export async function POST(request: NextRequest) {
       roomId: room.id,
       roomType: "private",
       senderId: authed.decoded.userId,
-      text: parsed.text,
-      attachments: parsed.attachments,
+      text,
+      attachments,
+      encrypted,
     });
 
     return successResponse({ message: enrichMessages([msg])[0] }, "Message sent", 201);

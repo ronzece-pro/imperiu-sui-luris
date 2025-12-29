@@ -3,6 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
+import {
+  decryptPrivateMessage,
+  encryptPrivateMessage,
+  loadOrCreateIdentityKeyPair,
+} from "@/lib/chat/e2eClient";
 
 type ChatUser = {
   id: string;
@@ -28,6 +33,12 @@ type ChatMessage = {
   senderId: string;
   text: string;
   attachments?: ChatAttachment[];
+  encrypted?: {
+    v: 1;
+    algorithm: "AES-GCM";
+    iv: string;
+    ciphertext: string;
+  };
   createdAt: string;
   sender?: ChatUser;
 };
@@ -69,8 +80,16 @@ export default function ChatPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string>("");
 
+  const [privateBlocked, setPrivateBlocked] = useState(false);
+
   const [privateUnreadByUserId, setPrivateUnreadByUserId] = useState<Record<string, number>>({});
   const [privateTotalUnread, setPrivateTotalUnread] = useState(0);
+
+  const [e2e, setE2e] = useState<{ publicJwk: JsonWebKey; privateJwk: JsonWebKey } | null>(null);
+  const [otherPublicJwk, setOtherPublicJwk] = useState<JsonWebKey | null>(null);
+  const [decryptedByMessageId, setDecryptedByMessageId] = useState<Record<string, { text: string; attachments?: ChatAttachment[] }>>(
+    {}
+  );
 
   const [text, setText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -134,6 +153,64 @@ export default function ChatPage() {
     void fetchMe();
     void fetchUsers();
   }, [token]);
+
+  useEffect(() => {
+    if (!token || !me?.id) return;
+    let cancelled = false;
+
+    const ensureKeys = async () => {
+      try {
+        const kp = await loadOrCreateIdentityKeyPair();
+        if (cancelled) return;
+        setE2e({ publicJwk: kp.publicJwk, privateJwk: kp.privateJwk });
+
+        // publish public key (idempotent)
+        await fetch("/api/chat/keys", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ algorithm: "ECDH-P256", publicKeyJwk: kp.publicJwk }),
+        });
+      } catch {
+        // ignore (E2E will be unavailable)
+      }
+    };
+
+    void ensureKeys();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, me?.id]);
+
+  useEffect(() => {
+    if (!token || !me?.id) return;
+    if (!selectedUserId) {
+      setOtherPublicJwk(null);
+      return;
+    }
+
+    let cancelled = false;
+    const loadOtherKey = async () => {
+      try {
+        const res = await fetch(`/api/chat/keys?userId=${encodeURIComponent(selectedUserId)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const json = await res.json();
+        if (!res.ok || !json?.success) return;
+        if (cancelled) return;
+        setOtherPublicJwk((json.data?.publicKeyJwk as JsonWebKey) || null);
+      } catch {
+        if (!cancelled) setOtherPublicJwk(null);
+      }
+    };
+
+    void loadOtherKey();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedUserId, token, me?.id]);
 
   useEffect(() => {
     if (!token) return;
@@ -201,6 +278,12 @@ export default function ChatPage() {
         if (!cancelled) {
           setRoom(json.data?.room || null);
           setMessages((json.data?.messages || []) as ChatMessage[]);
+
+          if (selectedUserId) {
+            setPrivateBlocked(Boolean(json.data?.blocked));
+          } else {
+            setPrivateBlocked(false);
+          }
         }
       } catch {
         if (!cancelled && !silent) setError("Eroare de rețea");
@@ -263,11 +346,12 @@ export default function ChatPage() {
     if (!token) return;
     if (!text.trim() && files.length === 0) return;
     if (!isPrivate && !canUseGlobal) return;
+    if (isPrivate && privateBlocked) return;
 
     setSending(true);
     try {
       const attachments = await Promise.all(files.map(fileToAttachment));
-      const payload = {
+      const plainPayload = {
         text,
         attachments: attachments.map((a, i) => ({
           id: `att_${Date.now()}_${i}`,
@@ -277,6 +361,20 @@ export default function ChatPage() {
           dataUrl: a.dataUrl,
         })),
       };
+
+      const payload = isPrivate
+        ? e2e && otherPublicJwk && me?.id && selectedUserId
+          ? {
+              encrypted: await encryptPrivateMessage({
+                myPrivateJwk: e2e.privateJwk,
+                otherPublicJwk,
+                myUserId: me.id,
+                otherUserId: selectedUserId,
+                payload: plainPayload,
+              }),
+            }
+          : plainPayload
+        : plainPayload;
 
       const url = selectedUserId
         ? `/api/chat/private?withUserId=${encodeURIComponent(selectedUserId)}`
@@ -305,6 +403,48 @@ export default function ChatPage() {
     }
   };
 
+  useEffect(() => {
+    if (!isPrivate) {
+      setDecryptedByMessageId({});
+      return;
+    }
+    if (!e2e || !otherPublicJwk || !me?.id || !selectedUserId) return;
+
+    let cancelled = false;
+    const decryptAll = async () => {
+      const toDecrypt = messages.filter((m) => m.roomType === "private" && m.encrypted && !decryptedByMessageId[m.id]);
+      if (toDecrypt.length === 0) return;
+
+      const next: Record<string, { text: string; attachments?: ChatAttachment[] }> = {};
+      for (const m of toDecrypt) {
+        try {
+          const payload = await decryptPrivateMessage({
+            myPrivateJwk: e2e.privateJwk,
+            otherPublicJwk,
+            myUserId: me.id,
+            otherUserId: selectedUserId,
+            encrypted: m.encrypted!,
+          });
+          next[m.id] = {
+            text: typeof payload?.text === "string" ? payload.text : "",
+            attachments: Array.isArray(payload?.attachments) ? (payload.attachments as ChatAttachment[]) : undefined,
+          };
+        } catch {
+          next[m.id] = { text: "[Mesaj criptat – nu poate fi decriptat pe acest device]" };
+        }
+      }
+      if (!cancelled) {
+        setDecryptedByMessageId((prev) => ({ ...prev, ...next }));
+      }
+    };
+
+    void decryptAll();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, isPrivate, e2e, otherPublicJwk, me?.id, selectedUserId]);
+
   const deleteOwnPrivateMessage = async (messageId: string) => {
     if (!token || !selectedUserId) return;
     try {
@@ -318,6 +458,54 @@ export default function ChatPage() {
         return;
       }
       setMessages((prev) => prev.filter((m) => m.id !== messageId));
+    } catch {
+      setError("Eroare de rețea");
+    }
+  };
+
+  const toggleBlock = async () => {
+    if (!token || !selectedUserId) return;
+    try {
+      const res = await fetch("/api/chat/block", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ withUserId: selectedUserId, blocked: !privateBlocked }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.success) {
+        setError(json?.message || json?.error || "Nu s-a putut schimba statusul de blocare");
+        return;
+      }
+      setPrivateBlocked(Boolean(json.data?.blocked));
+    } catch {
+      setError("Eroare de rețea");
+    }
+  };
+
+  const reportUser = async (opts?: { messageId?: string; evidenceText?: string; evidenceCreatedAt?: string }) => {
+    if (!token || !selectedUserId) return;
+    const reason = (window.prompt("Motiv raportare (spam / înșelăciune / abuz):") || "").trim();
+    if (!reason) return;
+
+    try {
+      const res = await fetch("/api/chat/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          withUserId: selectedUserId,
+          reason,
+          messageId: opts?.messageId,
+          evidence: opts?.evidenceText
+            ? { messageText: opts.evidenceText, createdAt: opts.evidenceCreatedAt }
+            : undefined,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.success) {
+        setError(json?.message || json?.error || "Nu s-a putut trimite raportul");
+        return;
+      }
+      alert("Raport trimis. Mulțumim!");
     } catch {
       setError("Eroare de rețea");
     }
@@ -442,10 +630,31 @@ export default function ChatPage() {
                   <div className="text-xs text-gray-400">
                     {isPrivate ? "Mesajele se șterg implicit după 72h" : "Mesajele se șterg automat după 24h"}
                   </div>
+                  {isPrivate ? (
+                    <div className="text-xs text-gray-400">
+                      {e2e && otherPublicJwk ? "Criptat end-to-end (E2E)" : "E2E indisponibil pe acest device"}
+                    </div>
+                  ) : null}
                 </div>
 
                 {isPrivate && (
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => void reportUser()}
+                      className="text-xs px-3 py-1 rounded border bg-black/20 border-white/10 text-gray-200 hover:bg-white/5"
+                    >
+                      Raportează
+                    </button>
+                    <button
+                      onClick={() => void toggleBlock()}
+                      className={`text-xs px-3 py-1 rounded border ${
+                        privateBlocked
+                          ? "bg-red-600/20 border-red-700 text-red-200 hover:bg-red-600/30"
+                          : "bg-black/20 border-white/10 text-gray-200 hover:bg-white/5"
+                      }`}
+                    >
+                      {privateBlocked ? "Deblochează" : "Blochează"}
+                    </button>
                     <div className="text-xs text-gray-400">Timer:</div>
                     <select
                       value={room?.autoDeleteSeconds ?? 0}
@@ -474,6 +683,9 @@ export default function ChatPage() {
                 ) : (
                   messages.map((m) => {
                     const mine = me?.id && m.senderId === me.id;
+                    const decrypted = isPrivate ? decryptedByMessageId[m.id] : null;
+                    const displayText = decrypted ? decrypted.text : m.text;
+                    const displayAttachments = decrypted?.attachments ?? m.attachments;
                     return (
                       <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                         <div className={`max-w-[80%] rounded-lg border px-3 py-2 ${mine ? "bg-blue-600/25 border-blue-700" : "bg-black/20 border-white/10"}`}>
@@ -484,11 +696,11 @@ export default function ChatPage() {
                             </span>
                             <span className="whitespace-nowrap">{new Date(m.createdAt).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" })}</span>
                           </div>
-                          {m.text && <div className="text-sm text-gray-100 mt-1 whitespace-pre-wrap">{m.text}</div>}
+                          {displayText && <div className="text-sm text-gray-100 mt-1 whitespace-pre-wrap">{displayText}</div>}
 
-                          {m.attachments && m.attachments.length > 0 && (
+                          {displayAttachments && displayAttachments.length > 0 && (
                             <div className="mt-2 space-y-2">
-                              {m.attachments.map((a) => (
+                              {displayAttachments.map((a) => (
                                 <div key={a.id} className="text-sm">
                                   {a.kind === "image" ? (
                                     // eslint-disable-next-line @next/next/no-img-element
@@ -519,6 +731,23 @@ export default function ChatPage() {
                               </button>
                             </div>
                           )}
+
+                          {isPrivate && !mine && (
+                            <div className="mt-2">
+                              <button
+                                onClick={() =>
+                                  void reportUser({
+                                    messageId: m.id,
+                                    evidenceText: displayText,
+                                    evidenceCreatedAt: m.createdAt,
+                                  })
+                                }
+                                className="text-xs text-yellow-300 hover:text-yellow-200"
+                              >
+                                Raportează mesajul
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -527,11 +756,15 @@ export default function ChatPage() {
                 {initialLoading && messages.length === 0 ? (
                   <div className="text-gray-400">Se încarcă...</div>
                 ) : null}
-                {refreshing ? <div className="text-[10px] text-gray-500">Sincronizez…</div> : null}
                 <div ref={bottomRef} />
               </div>
 
               <div className="p-4 border-t border-slate-700">
+                {isPrivate && privateBlocked && (
+                  <div className="mb-3 text-sm text-red-200">
+                    Chat blocat. Nu poți trimite mesaje către acest utilizator.
+                  </div>
+                )}
                 {!isPrivate && !canUseGlobal && (
                   <div className="mb-3 text-sm text-yellow-300">
                     Contul tău trebuie marcat ca <strong>verificat</strong> de admin ca să folosești chat-ul global.
@@ -543,7 +776,7 @@ export default function ChatPage() {
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     placeholder={isPrivate ? "Scrie mesaj..." : canUseGlobal ? "Scrie în chat global..." : "Chat global blocat"}
-                    disabled={!isPrivate && !canUseGlobal}
+                    disabled={(!isPrivate && !canUseGlobal) || (isPrivate && privateBlocked)}
                     className="flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 disabled:opacity-60"
                   />
                   <input
@@ -551,12 +784,17 @@ export default function ChatPage() {
                     multiple
                     accept="image/*,application/pdf,text/plain"
                     onChange={onPickFiles}
-                    disabled={(!isPrivate && !canUseGlobal) || sending}
+                    disabled={(!isPrivate && !canUseGlobal) || (isPrivate && privateBlocked) || sending}
                     className="text-sm text-gray-300"
                   />
                   <button
                     onClick={() => void send()}
-                    disabled={sending || (!text.trim() && files.length === 0) || (!isPrivate && !canUseGlobal)}
+                    disabled={
+                      sending ||
+                      (!text.trim() && files.length === 0) ||
+                      (!isPrivate && !canUseGlobal) ||
+                      (isPrivate && privateBlocked)
+                    }
                     className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-semibold"
                   >
                     {sending ? "Trimite…" : "Trimite"}

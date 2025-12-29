@@ -119,6 +119,7 @@ export function createMessage(params: {
   senderId: string;
   text: string;
   attachments?: ChatAttachment[];
+  encrypted?: ChatMessage["encrypted"];
 }): ChatMessage {
   const msg: ChatMessage = {
     id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -127,6 +128,7 @@ export function createMessage(params: {
     senderId: params.senderId,
     text: params.text,
     attachments: params.attachments,
+    encrypted: params.encrypted,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -208,4 +210,60 @@ export function getPrivateUnreadCounts(userId: string) {
     totalUnread,
     unreadByUserId: Object.fromEntries(byUserId.entries()),
   };
+}
+
+export function isUserBlocked(a: string, b: string) {
+  return (
+    mockDatabase.chatUserBlocks.some((x) => x.blockerUserId === a && x.blockedUserId === b) ||
+    mockDatabase.chatUserBlocks.some((x) => x.blockerUserId === b && x.blockedUserId === a)
+  );
+}
+
+export function setUserBlock(blockerUserId: string, blockedUserId: string, blocked: boolean) {
+  if (blockerUserId === blockedUserId) return { ok: false as const, error: "Invalid" };
+
+  const idx = mockDatabase.chatUserBlocks.findIndex(
+    (x) => x.blockerUserId === blockerUserId && x.blockedUserId === blockedUserId
+  );
+  if (blocked) {
+    if (idx === -1) {
+      mockDatabase.chatUserBlocks.push({ blockerUserId, blockedUserId, createdAt: new Date() });
+    }
+  } else {
+    if (idx !== -1) mockDatabase.chatUserBlocks.splice(idx, 1);
+  }
+  return { ok: true as const };
+}
+
+export function isBlockedByMe(meUserId: string, otherUserId: string) {
+  return mockDatabase.chatUserBlocks.some((x) => x.blockerUserId === meUserId && x.blockedUserId === otherUserId);
+}
+
+export function createChatReport(params: {
+  reporterUserId: string;
+  reportedUserId: string;
+  roomId?: string;
+  messageId?: string;
+  reason: string;
+  evidence?: { messageText?: string; createdAt?: string };
+}) {
+  const report = {
+    id: `rep_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    reporterUserId: params.reporterUserId,
+    reportedUserId: params.reportedUserId,
+    roomId: params.roomId,
+    messageId: params.messageId,
+    reason: params.reason,
+    evidence: params.evidence,
+    createdAt: new Date(),
+  };
+  mockDatabase.chatReports.push(report as any);
+  return report;
+}
+
+export function listChatReports(limit = 200) {
+  return mockDatabase.chatReports
+    .slice()
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, limit);
 }

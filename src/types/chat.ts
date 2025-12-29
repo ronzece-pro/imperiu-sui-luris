@@ -27,6 +27,12 @@ export interface ChatMessage {
   senderId: string;
   text: string;
   attachments?: ChatAttachment[];
+  encrypted?: {
+    v: 1;
+    algorithm: "AES-GCM";
+    iv: string; // base64
+    ciphertext: string; // base64
+  };
   createdAt: Date;
   updatedAt: Date;
   deletedAt?: Date;
@@ -40,4 +46,33 @@ export interface ChatRoomRead {
   userId: string;
   roomId: string;
   lastReadAt: Date;
+}
+
+export interface ChatPublicKey {
+  userId: string;
+  algorithm: "ECDH-P256";
+  publicKeyJwk: JsonWebKey;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ChatUserBlock {
+  blockerUserId: string;
+  blockedUserId: string;
+  createdAt: Date;
+}
+
+export interface ChatReport {
+  id: string;
+  reporterUserId: string;
+  reportedUserId: string;
+  roomId?: string;
+  messageId?: string;
+  reason: string;
+  evidence?: {
+    // plaintext evidence provided voluntarily by reporter
+    messageText?: string;
+    createdAt?: string;
+  };
+  createdAt: Date;
 }
