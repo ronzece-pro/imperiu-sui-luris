@@ -1,10 +1,15 @@
 import type { AuditEventType, AuditLogEntry } from "@/types";
 import { mockDatabase } from "@/lib/db/config";
+import { adminDatabase } from "@/lib/admin/config";
 
 const DEFAULT_RETENTION_DAYS = 15;
 const DEFAULT_MAX_ENTRIES = 5000;
 
 function getRetentionDays(): number {
+  const adminValue = (adminDatabase as any)?.auditSettings?.retentionDays;
+  if (typeof adminValue === "number" && Number.isFinite(adminValue)) {
+    return Math.max(1, Math.min(365, Math.floor(adminValue)));
+  }
   const raw = process.env.AUDIT_RETENTION_DAYS;
   const n = raw ? Number(raw) : DEFAULT_RETENTION_DAYS;
   if (!Number.isFinite(n)) return DEFAULT_RETENTION_DAYS;
@@ -12,6 +17,10 @@ function getRetentionDays(): number {
 }
 
 function getMaxEntries(): number {
+  const adminValue = (adminDatabase as any)?.auditSettings?.maxEntries;
+  if (typeof adminValue === "number" && Number.isFinite(adminValue)) {
+    return Math.max(100, Math.min(100_000, Math.floor(adminValue)));
+  }
   const raw = process.env.AUDIT_MAX_ENTRIES;
   const n = raw ? Number(raw) : DEFAULT_MAX_ENTRIES;
   if (!Number.isFinite(n)) return DEFAULT_MAX_ENTRIES;

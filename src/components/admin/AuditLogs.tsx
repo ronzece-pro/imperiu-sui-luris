@@ -15,6 +15,29 @@ type AuditLogEntry = {
 export default function AdminAuditLogs() {
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [settingsSaving, setSettingsSaving] = useState(false);
+  const [retentionDays, setRetentionDays] = useState(15);
+  const [maxEntries, setMaxEntries] = useState(5000);
+  const [settingsMessage, setSettingsMessage] = useState<string>("");
+  const [settingsMessageKind, setSettingsMessageKind] = useState<"success" | "error">("success");
+
+  const fetchSettings = async () => {
+    try {
+      setSettingsLoading(true);
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      const res = await fetch("/api/admin/audit/settings", { headers: { Authorization: `Bearer ${token}` } });
+      const json = await res.json();
+      if (!res.ok || !json?.success) return;
+      const s = json.data?.auditSettings as { retentionDays?: number; maxEntries?: number };
+      if (typeof s?.retentionDays === "number") setRetentionDays(s.retentionDays);
+      if (typeof s?.maxEntries === "number") setMaxEntries(s.maxEntries);
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
 
   const fetchLogs = async () => {
     try {
@@ -39,8 +62,44 @@ export default function AdminAuditLogs() {
 
   useEffect(() => {
     void fetchLogs();
+    void fetchSettings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const saveSettings = async () => {
+    try {
+      setSettingsSaving(true);
+      setSettingsMessage("");
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setSettingsMessageKind("error");
+        setSettingsMessage("Trebuie să fii logat ca admin");
+        return;
+      }
+
+      const res = await fetch("/api/admin/audit/settings", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ retentionDays, maxEntries }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.success) {
+        setSettingsMessageKind("error");
+        setSettingsMessage(json?.error || json?.message || "Eroare");
+        return;
+      }
+
+      setSettingsMessageKind("success");
+      setSettingsMessage("Salvat");
+      setTimeout(() => setSettingsMessage(""), 2000);
+      await fetchLogs();
+    } finally {
+      setSettingsSaving(false);
+    }
+  };
 
   const sorted = useMemo(() => {
     return [...logs].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
@@ -59,6 +118,57 @@ export default function AdminAuditLogs() {
         >
           Reîncarcă
         </button>
+      </div>
+
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="font-semibold">Setări retenție</div>
+            <div className="text-xs text-gray-400">Controlează cât timp și câte loguri se păstrează.</div>
+          </div>
+          <button
+            onClick={() => void saveSettings()}
+            disabled={settingsLoading || settingsSaving}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 rounded-lg text-sm font-medium transition"
+          >
+            {settingsSaving ? "Se salvează..." : "Salvează"}
+          </button>
+        </div>
+
+        {settingsMessage ? (
+          <div
+            className={`mt-3 px-4 py-3 text-sm border border-gray-800 rounded-lg ${
+              settingsMessageKind === "success" ? "bg-green-900 text-green-200" : "bg-red-900 text-red-200"
+            }`}
+          >
+            {settingsMessage}
+          </div>
+        ) : null}
+
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <label className="text-sm text-gray-200">
+            Zile retenție
+            <input
+              type="number"
+              min={1}
+              max={365}
+              value={retentionDays}
+              onChange={(e) => setRetentionDays(Number(e.target.value || 0))}
+              className="mt-2 w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+            />
+          </label>
+          <label className="text-sm text-gray-200">
+            Max loguri
+            <input
+              type="number"
+              min={100}
+              max={100000}
+              value={maxEntries}
+              onChange={(e) => setMaxEntries(Number(e.target.value || 0))}
+              className="mt-2 w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+            />
+          </label>
+        </div>
       </div>
 
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">

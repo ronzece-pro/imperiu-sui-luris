@@ -51,6 +51,7 @@ export default function RegisterPage() {
       if (data.success) {
         localStorage.setItem("token", data.data.token);
         localStorage.setItem("user", JSON.stringify(data.data.user));
+        window.dispatchEvent(new Event("auth-changed"));
         router.push("/dashboard");
       } else {
         setError(data.error || "Registration failed");

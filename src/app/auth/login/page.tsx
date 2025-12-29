@@ -33,6 +33,7 @@ export default function LoginPage() {
       if (data.success) {
         localStorage.setItem("token", data.data.token);
         localStorage.setItem("user", JSON.stringify(data.data.user));
+        window.dispatchEvent(new Event("auth-changed"));
         
         // Redirect admin to admin panel
         if (data.data.user?.role === "admin" || data.data.user?.email === "admin@imperiu-sui-luris.com") {

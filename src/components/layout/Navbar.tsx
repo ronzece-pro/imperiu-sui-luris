@@ -61,15 +61,22 @@ export default function Header() {
     };
     window.addEventListener("storage", onStorage);
 
+    const onAuthChanged = () => {
+      readAuthFromStorage();
+    };
+    window.addEventListener("auth-changed", onAuthChanged as EventListener);
+
     return () => {
       clearTimeout(t);
       window.removeEventListener("storage", onStorage);
+      window.removeEventListener("auth-changed", onAuthChanged as EventListener);
     };
   }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    window.dispatchEvent(new Event("auth-changed"));
     setIsLoggedIn(false);
     setUserMenu(false);
     setMobileMenu(false);

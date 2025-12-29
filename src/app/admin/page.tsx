@@ -78,6 +78,9 @@ export default function AdminDashboard() {
         return;
       }
 
+      const lastSeenReportsAt = Number(localStorage.getItem("admin_lastSeenReportsAt") || 0);
+      const lastSeenVerificationsAt = Number(localStorage.getItem("admin_lastSeenVerificationsAt") || 0);
+
       const [reportsRes, verRes] = await Promise.all([
         fetch("/api/admin/chat/reports", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/admin/verification?limit=200", { headers: { Authorization: `Bearer ${token}` } }),
@@ -86,8 +89,16 @@ export default function AdminDashboard() {
       const reportsJson = await reportsRes.json().catch(() => null);
       const verJson = await verRes.json().catch(() => null);
 
-      setReportCount(Number(reportsJson?.data?.reports?.length || 0));
-      setPendingVerifications(Number(verJson?.data?.pendingCount || 0));
+      const reports = (reportsJson?.data?.reports || []) as Array<{ createdAt?: string | Date }>;
+      const newReports = reports.filter((r) => +new Date(r.createdAt || 0) > lastSeenReportsAt).length;
+
+      const requests = (verJson?.data?.requests || []) as Array<{ createdAt?: string | Date; status?: string }>;
+      const newPendingVerifications = requests.filter(
+        (r) => r.status === "pending" && +new Date(r.createdAt || 0) > lastSeenVerificationsAt
+      ).length;
+
+      setReportCount(newReports);
+      setPendingVerifications(newPendingVerifications);
     } catch {
       // ignore
     }
@@ -153,6 +164,17 @@ export default function AdminDashboard() {
             <h1 className="text-xl font-bold">Admin Panel</h1>
           </div>
           <div className="flex items-center gap-4">
+            <div className="hidden sm:flex items-center gap-2">
+              <Link href="/dashboard" className="px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-xs font-medium transition">
+                Dashboard
+              </Link>
+              <Link href="/marketplace" className="px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-xs font-medium transition">
+                Piață
+              </Link>
+              <Link href="/chat" className="px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-xs font-medium transition">
+                Chat
+              </Link>
+            </div>
             <span className="text-sm text-gray-400">Bine ai venit, {userName}</span>
             <button
               onClick={handleLogout}
@@ -184,6 +206,9 @@ export default function AdminDashboard() {
               <button
                 key={item.id}
                 onClick={() => {
+                  const now = Date.now();
+                  if (item.id === "reports") localStorage.setItem("admin_lastSeenReportsAt", String(now));
+                  if (item.id === "verifications") localStorage.setItem("admin_lastSeenVerificationsAt", String(now));
                   setActiveTab(item.id);
                   void fetchAdminBadges();
                 }}

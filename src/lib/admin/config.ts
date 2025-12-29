@@ -137,6 +137,12 @@ Vânzările neautorizate sunt interzise.
 
   // Admin Logs
   adminLogs: [] as unknown[],
+
+  // Audit settings (controls in-memory audit log retention)
+  auditSettings: {
+    retentionDays: 15,
+    maxEntries: 5000,
+  },
 };
 
 // Helper function to log admin actions
