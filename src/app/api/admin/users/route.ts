@@ -28,20 +28,30 @@ export async function GET(request: NextRequest) {
 
   const users = mockDatabase.users
     .filter((u) => (u as any).accountStatus !== "deleted")
-    .map((u) => ({
-    badge: (u.badge || "citizen") as UserBadge,
-    id: u.id,
-    email: u.email,
-    username: u.username,
-    fullName: u.fullName,
-    citizenship: u.citizenship,
-    accountStatus: (u as any).accountStatus || "active",
-    isVerified: Boolean((u as any).isVerified),
-    role: u.role || "user",
-    badgeLabel: getBadgeLabel((u.badge || "citizen") as UserBadge),
-    createdAt: u.createdAt,
-    updatedAt: u.updatedAt,
-  }));
+    .map((u) => {
+      const invitedByUserId = (u as any).invitedByUserId as string | undefined;
+      const inviter = invitedByUserId ? mockDatabase.users.find((x) => x.id === invitedByUserId) : undefined;
+      const inviteesCount = mockDatabase.users.filter((x) => (x as any).invitedByUserId === u.id).length;
+
+      return {
+        badge: (u.badge || "citizen") as UserBadge,
+        id: u.id,
+        email: u.email,
+        username: u.username,
+        fullName: u.fullName,
+        citizenship: u.citizenship,
+        accountStatus: (u as any).accountStatus || "active",
+        isVerified: Boolean((u as any).isVerified),
+        role: u.role || "user",
+        badgeLabel: getBadgeLabel((u.badge || "citizen") as UserBadge),
+        invitedByUserId: invitedByUserId || null,
+        invitedByName: inviter?.fullName || inviter?.username || null,
+        invitedByEmail: inviter?.email || null,
+        inviteesCount,
+        createdAt: u.createdAt,
+        updatedAt: u.updatedAt,
+      };
+    });
 
   return successResponse(users);
 }

@@ -1,40 +1,63 @@
 import { NextRequest, NextResponse } from "next/server";
 import { mockDatabase } from "@/lib/db/config";
-import { validateAdminCredentials, getAdminConfig } from "@/lib/admin/persistence";
+import { validateAdminCredentials } from "@/lib/admin/persistence";
 import { createToken, hashPassword, verifyPassword } from "@/lib/auth/utils";
+import { consumeInviteCode } from "@/lib/invites/persistence";
 import { successResponse, errorResponse } from "@/lib/api/response";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { email, password, username, fullName, action } = body;
+    const body = (await request.json()) as {
+      email?: unknown;
+      password?: unknown;
+      username?: unknown;
+      fullName?: unknown;
+      action?: unknown;
+      inviteCode?: unknown;
+    };
 
-    const emailNormalized = typeof email === "string" ? email.trim().toLowerCase() : "";
+    const emailNormalized = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
     if (!emailNormalized) {
       return errorResponse("Email is required", 400);
     }
 
-    if (action === "register") {
-      // Check if user already exists
+    if (body.action === "register") {
       const existingUser = mockDatabase.users.find((u) => u.email.toLowerCase() === emailNormalized);
       if (existingUser) {
         return errorResponse("User already exists", 409);
       }
-      // Password is required for registration
-      if (!body.password || body.password.length < 6) {
+
+      const passwordStr = typeof body.password === "string" ? body.password : "";
+      if (passwordStr.length < 6) {
         return errorResponse("Password is required and must be at least 6 characters", 400);
       }
 
-      // Create new user with hashed password
-      const passwordHash = hashPassword(body.password);
+      const inviteCodeRaw = typeof body.inviteCode === "string" ? body.inviteCode : "";
+      if (!inviteCodeRaw.trim()) {
+        return errorResponse("Cod de invitație obligatoriu", 400);
+      }
+
+      const newUserId = `user_${Date.now()}`;
+      const consumed = consumeInviteCode(inviteCodeRaw, newUserId);
+      if (!consumed.ok) {
+        return errorResponse(consumed.error, consumed.status);
+      }
+
+      const passwordHash = hashPassword(passwordStr);
 
       const newUser = {
-        id: `user_${Date.now()}`,
+        id: newUserId,
         email: emailNormalized,
-        username: username || emailNormalized.split("@")[0],
-        fullName: fullName || "New Citizen",
+        username:
+          typeof body.username === "string" && body.username.trim()
+            ? body.username.trim()
+            : emailNormalized.split("@")[0],
+        fullName:
+          typeof body.fullName === "string" && body.fullName.trim() ? body.fullName.trim() : "New Citizen",
         country: "Romania",
         citizenship: "pending",
+        invitedByUserId: consumed.invite.inviterUserId,
+        invitedByCode: consumed.invite.code,
         role: "user",
         badge: "citizen",
         accountStatus: "active",
@@ -68,10 +91,12 @@ export async function POST(request: NextRequest) {
         "User registered successfully",
         201
       );
-    } else if (action === "login") {
-      // Check if it's admin owner login
-      if (validateAdminCredentials(emailNormalized, password)) {
-        // Use the same admin identity as the rest of the app (e.g. feed permissions)
+    }
+
+    if (body.action === "login") {
+      const passwordStr = typeof body.password === "string" ? body.password : "";
+
+      if (validateAdminCredentials(emailNormalized, passwordStr)) {
         const adminUserId = "user_admin";
         const adminEmail = "admin@imperiu-sui-luris.com";
         const token = createToken(adminUserId, adminEmail);
@@ -92,24 +117,17 @@ export async function POST(request: NextRequest) {
           "Admin login successful"
         );
       }
-      // Find regular user by email
+
       const user = mockDatabase.users.find((u) => u.email.toLowerCase() === emailNormalized);
       if (!user) {
         return errorResponse("Invalid email or password", 401);
       }
 
-      if (user.accountStatus === "deleted") {
-        return errorResponse("Account deleted", 403);
-      }
-      if (user.accountStatus === "banned") {
-        return errorResponse("Account banned", 403);
-      }
-      if (user.accountStatus === "blocked") {
-        return errorResponse("Account blocked", 403);
-      }
+      if ((user as any).accountStatus === "deleted") return errorResponse("Account deleted", 403);
+      if ((user as any).accountStatus === "banned") return errorResponse("Account banned", 403);
+      if ((user as any).accountStatus === "blocked") return errorResponse("Account blocked", 403);
 
-      // Verify password
-      const isValid = verifyPassword(password, user.passwordHash || "");
+      const isValid = verifyPassword(passwordStr, (user as any).passwordHash || "");
       if (!isValid) {
         return errorResponse("Invalid email or password", 401);
       }
@@ -132,9 +150,9 @@ export async function POST(request: NextRequest) {
         },
         "Login successful"
       );
-    } else {
-      return errorResponse("Invalid action", 400);
     }
+
+    return errorResponse("Invalid action", 400);
   } catch (error) {
     return errorResponse("Internal server error", 500);
   }

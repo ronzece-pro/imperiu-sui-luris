@@ -12,6 +12,7 @@ import type {
   ChatRoomRead,
   ChatUserBlock,
   Document,
+  InviteCode,
   MarketplaceItem,
   VerificationRequest,
 } from "@/types";
@@ -143,6 +144,7 @@ export const mockDatabase = {
   chatReports: [] as ChatReport[],
   verificationRequests: [] as VerificationRequest[],
   auditLogs: [] as AuditLogEntry[],
+  invites: [] as InviteCode[],
   landProperties: [
     {
       id: "land_001",

@@ -13,6 +13,8 @@ export interface User {
   fullName: string;
   country: string;
   citizenship: "pending" | "active" | "revoked";
+  invitedByUserId?: string;
+  invitedByCode?: string;
   accountStatus?: AccountStatus;
   isVerified?: boolean;
   role?: UserRole;
@@ -148,3 +150,4 @@ export interface UserStats {
 export * from "./chat";
 export * from "./verification";
 export * from "./audit";
+export * from "./invite";

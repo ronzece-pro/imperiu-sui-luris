@@ -40,6 +40,12 @@ export default function ProfilePage() {
   const [properties, setProperties] = useState<LandProperty[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [invitees, setInvitees] = useState<Array<{ id: string; fullName: string; email: string; createdAt: string }>>(
+    []
+  );
+  const [invitesLoading, setInvitesLoading] = useState(false);
+  const [invitesMessage, setInvitesMessage] = useState<string>("");
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
@@ -176,6 +182,79 @@ export default function ProfilePage() {
     }
   };
 
+  const loadInvites = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      setInvitesLoading(true);
+      setInvitesMessage("");
+
+      const response = await fetch("/api/invites", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      if (!data?.success) {
+        setInvitesMessage(data?.error || "Eroare la încărcarea invitațiilor");
+        return;
+      }
+
+      setInviteCode(data.data?.activeInviteCode || null);
+      const rawInvitees = Array.isArray(data.data?.invitedUsers) ? data.data.invitedUsers : [];
+      setInvitees(
+        rawInvitees.map((u: any) => ({
+          id: String(u.id || ""),
+          fullName: String(u.fullName || u.username || u.email || ""),
+          email: String(u.email || ""),
+          createdAt: u.createdAt ? new Date(u.createdAt).toISOString().split("T")[0] : "",
+        }))
+      );
+    } catch (e) {
+      setInvitesMessage("Eroare la încărcarea invitațiilor");
+    } finally {
+      setInvitesLoading(false);
+    }
+  };
+
+  const generateInvite = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      setInvitesLoading(true);
+      setInvitesMessage("");
+      const response = await fetch("/api/invites", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (!data?.success) {
+        setInvitesMessage(data?.error || "Eroare la generare");
+        return;
+      }
+
+      setInviteCode(data.data?.activeInviteCode || null);
+      setInvitesMessage("Cod generat");
+      setTimeout(() => setInvitesMessage(""), 2500);
+    } catch (e) {
+      setInvitesMessage("Eroare la generare");
+    } finally {
+      setInvitesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "invites") {
+      void loadInvites();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
   if (loading) {
     return (
       <>
@@ -278,7 +357,7 @@ export default function ProfilePage() {
           {/* Tabs */}
           <div className="mb-6 md:mb-8">
             <div className="flex gap-2 sm:gap-4 border-b border-slate-700 overflow-x-auto">
-              {["overview", "documents", "properties", "wallet", "settings"].map((tab) => (
+              {["overview", "documents", "properties", "wallet", "invites", "settings"].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -292,6 +371,7 @@ export default function ProfilePage() {
                   {tab === "documents" && "📄 Documente"}
                   {tab === "properties" && "🏠 Proprietăți"}
                   {tab === "wallet" && "💰 Portofel"}
+                  {tab === "invites" && "🎟️ Invitații"}
                   {tab === "settings" && "⚙️ Setări"}
                 </button>
               ))}
@@ -555,6 +635,81 @@ export default function ProfilePage() {
           {/* Wallet Tab */}
           {activeTab === "wallet" && (
             <WalletPanel />
+          )}
+
+          {/* Invites Tab */}
+          {activeTab === "invites" && (
+            <div className="bg-white bg-opacity-5 backdrop-blur-lg border border-slate-700 rounded-xl p-4 sm:p-6">
+              <h3 className="text-lg sm:text-xl font-bold text-white mb-2">Invitații</h3>
+              <p className="text-gray-400 text-xs sm:text-sm mb-4">Fiecare cod poate fi folosit o singură dată.</p>
+
+              {invitesMessage && (
+                <div className="bg-white bg-opacity-5 border border-slate-700 text-gray-200 px-4 py-3 rounded-lg text-sm mb-4">
+                  {invitesMessage}
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-2 mb-6">
+                <input
+                  value={inviteCode || ""}
+                  readOnly
+                  placeholder={invitesLoading ? "Se încarcă..." : "Nu ai un cod activ"}
+                  className="flex-1 px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={generateInvite}
+                  disabled={invitesLoading}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-xs sm:text-sm transition disabled:opacity-60"
+                >
+                  Generează cod
+                </button>
+                <button
+                  type="button"
+                  disabled={!inviteCode}
+                  onClick={() => {
+                    if (!inviteCode) return;
+                    navigator.clipboard
+                      .writeText(inviteCode)
+                      .then(() => {
+                        setInvitesMessage("Copiat");
+                        setTimeout(() => setInvitesMessage(""), 1500);
+                      })
+                      .catch(() => {
+                        setInvitesMessage("Nu pot copia");
+                        setTimeout(() => setInvitesMessage(""), 2000);
+                      });
+                  }}
+                  className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold text-xs sm:text-sm transition disabled:opacity-60"
+                >
+                  Copiază
+                </button>
+              </div>
+
+              <div className="border-t border-slate-700 pt-4">
+                <h4 className="text-base font-semibold text-white mb-3">Invitații mei</h4>
+                {invitesLoading ? (
+                  <p className="text-gray-400 text-sm">Se încarcă...</p>
+                ) : invitees.length === 0 ? (
+                  <p className="text-gray-400 text-sm">Încă nu ai invitat pe nimeni.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {invitees.map((u) => (
+                      <div
+                        key={u.id}
+                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-slate-800 rounded-lg p-4 border border-slate-700"
+                      >
+                        <div>
+                          <p className="text-white font-semibold text-sm">{u.fullName}</p>
+                          <p className="text-gray-400 text-xs break-all">{u.email}</p>
+                        </div>
+                        <p className="text-gray-400 text-xs mt-2 sm:mt-0">Creat: {u.createdAt}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           )}
     
         </div>

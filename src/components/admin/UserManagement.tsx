@@ -9,6 +9,8 @@ interface UserRow {
   id: string;
   name: string;
   email: string;
+  invitedBy: string;
+  inviteesCount: number;
   badge: UserBadge;
   badgeLabel: string;
   role: string;
@@ -67,6 +69,9 @@ export default function AdminUserManagement({ onClose }: Props) {
         isVerified?: boolean;
         badge: UserBadge;
         badgeLabel?: string;
+        invitedByName?: string | null;
+        invitedByEmail?: string | null;
+        inviteesCount?: number;
         createdAt: string | Date;
       }>;
 
@@ -75,6 +80,8 @@ export default function AdminUserManagement({ onClose }: Props) {
           id: u.id,
           name: u.fullName || u.username || u.email,
           email: u.email,
+          invitedBy: u.invitedByName || u.invitedByEmail || "-",
+          inviteesCount: Number(u.inviteesCount || 0),
           role: u.role,
           citizenship: u.citizenship,
           accountStatus: u.accountStatus || "active",
@@ -268,6 +275,8 @@ export default function AdminUserManagement({ onClose }: Props) {
                 <tr>
                   <th className="px-4 py-3 text-left font-semibold">Nume</th>
                   <th className="px-4 py-3 text-left font-semibold">Email</th>
+                  <th className="px-4 py-3 text-left font-semibold">Invitat de</th>
+                  <th className="px-4 py-3 text-left font-semibold">Invitați</th>
                   <th className="px-4 py-3 text-left font-semibold">Status</th>
                   <th className="px-4 py-3 text-left font-semibold">Verificat</th>
                   <th className="px-4 py-3 text-left font-semibold">Insignă</th>
@@ -286,6 +295,8 @@ export default function AdminUserManagement({ onClose }: Props) {
                       )}
                     </td>
                     <td className="px-4 py-3 text-gray-400">{user.email}</td>
+                    <td className="px-4 py-3 text-gray-400">{user.invitedBy}</td>
+                    <td className="px-4 py-3 text-gray-400">{user.inviteesCount}</td>
                     <td className="px-4 py-3">
                       <span
                         className={`px-2 py-0.5 rounded text-xs border ${
