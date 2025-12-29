@@ -188,6 +188,17 @@ export default function ChatPage() {
     };
   }, [token, me?.id]);
 
+  const publishE2EPublicKey = async (publicJwk: JsonWebKey) => {
+    await fetch("/api/chat/keys", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ algorithm: "ECDH-P256", publicKeyJwk: publicJwk }),
+    });
+  };
+
   const activateE2EOnThisDevice = async () => {
     if (!token || !me?.id) return;
     const ok = window.confirm(
@@ -196,17 +207,14 @@ export default function ChatPage() {
     if (!ok) return;
 
     try {
+      if (e2e?.publicJwk) {
+        await publishE2EPublicKey(e2e.publicJwk);
+        return;
+      }
+
       const kp = await createAndStoreIdentityKeyPair();
       setE2e({ publicJwk: kp.publicJwk, privateJwk: kp.privateJwk });
-
-      await fetch("/api/chat/keys", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ algorithm: "ECDH-P256", publicKeyJwk: kp.publicJwk }),
-      });
+      await publishE2EPublicKey(kp.publicJwk);
     } catch {
       setError("Nu am putut activa E2E pe acest device");
     }
@@ -660,15 +668,19 @@ export default function ChatPage() {
                   </div>
                   {isPrivate ? (
                     <div className="text-xs text-gray-400">
-                        {e2eReady ? "Criptat end-to-end (E2E)" : "E2E indisponibil pe acest device"}
-                        {!e2e && (
-                          <button
-                            onClick={() => void activateE2EOnThisDevice()}
-                            className="ml-2 text-xs underline text-blue-300 hover:text-blue-200"
-                          >
-                            Activează E2E
-                          </button>
-                        )}
+                      {e2eReady
+                        ? "Criptat end-to-end (E2E)"
+                        : !e2e
+                          ? "E2E indisponibil pe acest device"
+                          : "E2E în așteptare (lipsește cheia celuilalt)"}
+                      {!e2eReady && (
+                        <button
+                          onClick={() => void activateE2EOnThisDevice()}
+                          className="ml-2 text-xs px-2 py-0.5 rounded border bg-black/20 border-white/10 text-gray-200 hover:bg-white/5"
+                        >
+                          {e2e ? "Re-publică cheia E2E" : "Activează E2E"}
+                        </button>
+                      )}
                     </div>
                   ) : null}
                 </div>
