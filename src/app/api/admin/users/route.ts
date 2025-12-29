@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
     fullName: u.fullName,
     citizenship: u.citizenship,
     accountStatus: (u as any).accountStatus || "active",
+    isVerified: Boolean((u as any).isVerified),
     role: u.role || "user",
     badgeLabel: getBadgeLabel((u.badge || "citizen") as UserBadge),
     createdAt: u.createdAt,
@@ -49,7 +50,7 @@ export async function PUT(request: NextRequest) {
   const admin = requireAdmin(request);
   if (!admin.ok) return admin.response;
 
-  const body = (await request.json()) as { userId?: string; badge?: unknown; userAction?: unknown };
+  const body = (await request.json()) as { userId?: string; badge?: unknown; userAction?: unknown; isVerified?: unknown };
   const userId = typeof body.userId === "string" ? body.userId : "";
   if (!userId) return errorResponse("userId is required", 400);
 
@@ -85,6 +86,13 @@ export async function PUT(request: NextRequest) {
     user.badge = body.badge;
   }
 
+  if (body.isVerified !== undefined) {
+    if (typeof body.isVerified !== "boolean") {
+      return errorResponse("Invalid isVerified", 400);
+    }
+    (user as any).isVerified = body.isVerified;
+  }
+
   user.updatedAt = new Date();
 
   if ((user as any).accountStatus === "deleted") {
@@ -99,6 +107,7 @@ export async function PUT(request: NextRequest) {
       badge,
       badgeLabel: getBadgeLabel(badge),
       accountStatus: (user as any).accountStatus || "active",
+      isVerified: Boolean((user as any).isVerified),
       updatedAt: user.updatedAt,
     },
     "User updated"

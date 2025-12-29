@@ -13,6 +13,7 @@ interface UserRow {
   badgeLabel: string;
   role: string;
   accountStatus: AccountStatus;
+  isVerified: boolean;
   citizenship: string;
   createdAt: string;
 }
@@ -63,6 +64,7 @@ export default function AdminUserManagement({ onClose }: Props) {
         citizenship: string;
         role: string;
         accountStatus?: AccountStatus;
+        isVerified?: boolean;
         badge: UserBadge;
         badgeLabel?: string;
         createdAt: string | Date;
@@ -76,6 +78,7 @@ export default function AdminUserManagement({ onClose }: Props) {
           role: u.role,
           citizenship: u.citizenship,
           accountStatus: u.accountStatus || "active",
+          isVerified: Boolean(u.isVerified),
           badge: u.badge,
           badgeLabel: u.badgeLabel || getBadgeLabel(u.badge),
           createdAt: new Date(u.createdAt).toISOString().split("T")[0],
@@ -136,6 +139,49 @@ export default function AdminUserManagement({ onClose }: Props) {
       setTimeout(() => setMessage(""), 2500);
     } catch (error) {
       console.error("Error updating badge:", error);
+      setMessageKind("error");
+      setMessage("Eroare la salvare");
+    } finally {
+      setSavingUserId(null);
+    }
+  };
+
+  const updateUserVerified = async (userId: string, isVerified: boolean) => {
+    try {
+      setSavingUserId(userId);
+      setMessage("");
+      setMessageKind("success");
+
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setMessageKind("error");
+        setMessage("Trebuie să fii logat ca admin");
+        return;
+      }
+
+      const response = await fetch("/api/admin/users", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId, isVerified }),
+      });
+
+      const data = await response.json();
+      if (!data?.success) {
+        setMessageKind("error");
+        setMessage(data?.error || "Eroare la salvare");
+        return;
+      }
+
+      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, isVerified } : u)));
+
+      setMessageKind("success");
+      setMessage("Verificare actualizată");
+      setTimeout(() => setMessage(""), 2500);
+    } catch (error) {
+      console.error("Error updating verified:", error);
       setMessageKind("error");
       setMessage("Eroare la salvare");
     } finally {
@@ -223,6 +269,7 @@ export default function AdminUserManagement({ onClose }: Props) {
                   <th className="px-4 py-3 text-left font-semibold">Nume</th>
                   <th className="px-4 py-3 text-left font-semibold">Email</th>
                   <th className="px-4 py-3 text-left font-semibold">Status</th>
+                  <th className="px-4 py-3 text-left font-semibold">Verificat</th>
                   <th className="px-4 py-3 text-left font-semibold">Insignă</th>
                   <th className="px-4 py-3 text-left font-semibold">Cetățenie</th>
                   <th className="px-4 py-3 text-left font-semibold">Creat</th>
@@ -251,6 +298,19 @@ export default function AdminUserManagement({ onClose }: Props) {
                       >
                         {user.accountStatus}
                       </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => updateUserVerified(user.id, !user.isVerified)}
+                        disabled={savingUserId === user.id}
+                        className={`px-2 py-1 rounded text-xs border transition disabled:opacity-60 ${
+                          user.isVerified
+                            ? "bg-green-900 text-green-200 border-green-800 hover:bg-green-800"
+                            : "bg-gray-800 text-gray-200 border-gray-700 hover:bg-gray-700"
+                        }`}
+                      >
+                        {user.isVerified ? "verificat" : "ne-verificat"}
+                      </button>
                     </td>
                     <td className="px-4 py-3">
                       <select

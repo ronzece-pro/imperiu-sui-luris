@@ -9,6 +9,7 @@ import AdminStripeSettings from "@/components/admin/StripeSettings";
 import AdminMetaMaskSettings from "@/components/admin/MetaMaskSettings";
 import AdminLurisManagement from "@/components/admin/LurisManagement";
 import AdminLegalPages from "@/components/admin/LegalPages";
+import AdminChatModeration from "@/components/admin/ChatModeration";
 
 interface AdminStats {
   totalUsers: number;
@@ -141,6 +142,7 @@ export default function AdminDashboard() {
               { id: "dashboard", label: "Dashboard", icon: "📊" },
               { id: "users", label: "Utilizatori", icon: "👥" },
               { id: "posts", label: "Postări", icon: "📝" },
+              { id: "chat", label: "Chat", icon: "💬" },
               { id: "payments", label: "Plăți", icon: "💳" },
               { id: "luris", label: "Luris Points", icon: "💎" },
               { id: "legal", label: "Pagini Legale", icon: "⚖️" },
@@ -258,6 +260,12 @@ export default function AdminDashboard() {
             <div className="p-4 sm:p-8">
               <h2 className="text-3xl font-bold mb-6">Gestionare Utilizatori</h2>
               <AdminUserManagement />
+            </div>
+          )}
+
+          {activeTab === "chat" && (
+            <div className="p-4 sm:p-8">
+              <AdminChatModeration />
             </div>
           )}
 

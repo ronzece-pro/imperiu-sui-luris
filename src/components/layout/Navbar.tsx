@@ -102,6 +102,11 @@ export default function Header() {
                 Dashboard
               </Link>
             )}
+            {isLoggedIn && (
+              <Link href="/chat" className="text-gray-300 hover:text-white transition duration-200 text-sm">
+                Chat
+              </Link>
+            )}
           </div>
 
           {/* Auth Buttons - Desktop */}
@@ -196,6 +201,15 @@ export default function Header() {
                 onClick={() => setMobileMenu(false)}
               >
                 Dashboard
+              </Link>
+            )}
+            {isLoggedIn && (
+              <Link
+                href="/chat"
+                className="block px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-slate-700/50 rounded"
+                onClick={() => setMobileMenu(false)}
+              >
+                Chat
               </Link>
             )}
             <hr className="border-slate-700" />

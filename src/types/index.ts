@@ -14,6 +14,7 @@ export interface User {
   country: string;
   citizenship: "pending" | "active" | "revoked";
   accountStatus?: AccountStatus;
+  isVerified?: boolean;
   role?: UserRole;
   badge?: UserBadge;
   createdAt: Date;
@@ -143,3 +144,5 @@ export interface UserStats {
   accountBalance: number;
   joinDate: Date;
 }
+
+export * from "./chat";

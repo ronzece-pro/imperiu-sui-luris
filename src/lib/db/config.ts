@@ -3,7 +3,7 @@
 // For development, we'll use a mock database structure
 
 import bcrypt from "bcryptjs";
-import type { Document, MarketplaceItem } from "@/types";
+import type { ChatMessage, ChatRoom, Document, MarketplaceItem } from "@/types";
 
 export const DATABASE_URL = process.env.DATABASE_URL || "postgresql://user:password@localhost:5432/imperiu_sui_luris";
 
@@ -19,6 +19,7 @@ export const mockDatabase = {
       role: "user",
       badge: "citizen",
       accountStatus: "active",
+      isVerified: true,
       // default dev password: 'password123' (hashed)
       passwordHash: bcrypt.hashSync("password123", 8),
       citizenship: "active",
@@ -37,6 +38,7 @@ export const mockDatabase = {
       role: "user",
       badge: "citizen",
       accountStatus: "active",
+      isVerified: false,
       passwordHash: bcrypt.hashSync("password123", 8),
       citizenship: "active",
       totalLandArea: 0,
@@ -55,6 +57,7 @@ export const mockDatabase = {
       badge: "citizen",
       accountStatus: "active",
       passwordHash: bcrypt.hashSync("password123", 8),
+      isVerified: false,
       citizenship: "pending",
       totalLandArea: 0,
       totalFunds: 0,
@@ -71,6 +74,7 @@ export const mockDatabase = {
       role: "user",
       badge: "citizen",
       accountStatus: "active",
+      isVerified: false,
       passwordHash: bcrypt.hashSync("password123", 8),
       citizenship: "active",
       totalLandArea: 750,
@@ -89,6 +93,7 @@ export const mockDatabase = {
       role: "admin",
       badge: "president",
       accountStatus: "active",
+      isVerified: true,
       passwordHash: bcrypt.hashSync(process.env.ADMIN_PASSWORD || "test1", 8),
       createdAt: new Date("2023-01-01"),
       updatedAt: new Date(),
@@ -119,6 +124,8 @@ export const mockDatabase = {
       updatedAt: new Date(),
     },
   ] as Document[],
+  chatRooms: [] as ChatRoom[],
+  chatMessages: [] as ChatMessage[],
   landProperties: [
     {
       id: "land_001",
