@@ -1,0 +1,232 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+
+type VerificationStatus = "pending" | "approved" | "rejected" | "resubmit_required";
+
+type AdminVerificationRequest = {
+  id: string;
+  userId: string;
+  docKind: "bulletin" | "passport" | "driver_license";
+  status: VerificationStatus;
+  adminNote?: string;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+  decidedAt?: string | Date;
+  user?: { id: string; fullName: string; email: string } | null;
+  uploads: Array<{
+    id: string;
+    kind: "document" | "selfie";
+    fileName: string;
+    mimeType: string;
+    size: number;
+    dataUrl: string;
+  }>;
+};
+
+function statusChip(status: VerificationStatus) {
+  if (status === "pending") return "bg-yellow-900 text-yellow-200 border-yellow-800";
+  if (status === "approved") return "bg-green-900 text-green-200 border-green-800";
+  if (status === "rejected") return "bg-red-900 text-red-200 border-red-800";
+  return "bg-purple-900 text-purple-200 border-purple-800";
+}
+
+export default function AdminVerificationRequests() {
+  const [requests, setRequests] = useState<AdminVerificationRequest[]>([]);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [message, setMessage] = useState<string>("");
+  const [messageKind, setMessageKind] = useState<"success" | "error">("success");
+
+  const pending = useMemo(() => requests.filter((r) => r.status === "pending"), [requests]);
+
+  const fetchAll = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setRequests([]);
+        setPendingCount(0);
+        return;
+      }
+
+      const res = await fetch("/api/admin/verification?limit=200", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (!json?.success) {
+        setRequests([]);
+        setPendingCount(0);
+        return;
+      }
+
+      setRequests((json.data?.requests || []) as AdminVerificationRequest[]);
+      setPendingCount(Number(json.data?.pendingCount || 0));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void fetchAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const decide = async (id: string, status: Exclude<VerificationStatus, "pending">) => {
+    try {
+      setBusyId(id);
+      setMessage("");
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setMessageKind("error");
+        setMessage("Trebuie să fii logat ca admin");
+        return;
+      }
+
+      const adminNote = status === "approved" ? "" : window.prompt("Notă pentru utilizator (opțional):") || "";
+
+      const res = await fetch("/api/admin/verification", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ requestId: id, status, adminNote }),
+      });
+      const json = await res.json();
+      if (!json?.success) {
+        setMessageKind("error");
+        setMessage(json?.error || json?.message || "Eroare");
+        return;
+      }
+
+      const updated = json.data?.request as AdminVerificationRequest;
+      setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, ...updated } : r)));
+      setMessageKind("success");
+      setMessage("Actualizat");
+      setTimeout(() => setMessage(""), 2000);
+      await fetchAll();
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-xl font-bold">Cereri verificare</h3>
+          <div className="text-sm text-gray-400">În așteptare: {pendingCount}</div>
+        </div>
+        <button
+          onClick={() => void fetchAll()}
+          className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-medium transition"
+        >
+          Reîncarcă
+        </button>
+      </div>
+
+      {message && (
+        <div
+          className={`px-4 py-3 text-sm border border-gray-800 rounded-lg ${
+            messageKind === "success" ? "bg-green-900 text-green-200" : "bg-red-900 text-red-200"
+          }`}
+        >
+          {message}
+        </div>
+      )}
+
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        {loading ? (
+          <div className="p-8 text-center text-gray-400">Se încarcă...</div>
+        ) : pending.length === 0 ? (
+          <div className="p-8 text-center text-gray-400">Nu există cereri în așteptare.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-800 border-b border-gray-700">
+                <tr>
+                  <th className="px-4 py-3 text-left font-semibold">Când</th>
+                  <th className="px-4 py-3 text-left font-semibold">Utilizator</th>
+                  <th className="px-4 py-3 text-left font-semibold">Status</th>
+                  <th className="px-4 py-3 text-left font-semibold">Preview</th>
+                  <th className="px-4 py-3 text-left font-semibold">Acțiuni</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-800">
+                {pending.map((r) => {
+                  const selfie = r.uploads.find((u) => u.kind === "selfie");
+                  const doc = r.uploads.find((u) => u.kind === "document" && u.mimeType.startsWith("image/"));
+
+                  return (
+                    <tr key={r.id} className="hover:bg-gray-800 transition">
+                      <td className="px-4 py-3 text-gray-400 whitespace-nowrap">
+                        {new Date(r.createdAt).toLocaleString("ro-RO")}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="font-medium">{r.user?.fullName || r.userId}</div>
+                        <div className="text-xs text-gray-400">{r.user?.email || ""}</div>
+                        <div className="text-xs text-gray-500">{r.docKind}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded text-xs border ${statusChip(r.status)}`}>{r.status}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2 items-center">
+                          {selfie?.mimeType?.startsWith("image/") ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={selfie.dataUrl} alt="selfie" className="w-10 h-10 object-cover rounded border border-gray-700" />
+                          ) : (
+                            <div className="w-10 h-10 rounded border border-gray-700 bg-black/30" />
+                          )}
+                          {doc?.mimeType?.startsWith("image/") ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={doc.dataUrl} alt="doc" className="w-10 h-10 object-cover rounded border border-gray-700" />
+                          ) : (
+                            <div className="w-10 h-10 rounded border border-gray-700 bg-black/30" />
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => void decide(r.id, "approved")}
+                            disabled={busyId === r.id}
+                            className="px-3 py-1 rounded-lg text-xs bg-green-600 hover:bg-green-700 disabled:opacity-60"
+                          >
+                            Aprobă
+                          </button>
+                          <button
+                            onClick={() => void decide(r.id, "resubmit_required")}
+                            disabled={busyId === r.id}
+                            className="px-3 py-1 rounded-lg text-xs bg-purple-600 hover:bg-purple-700 disabled:opacity-60"
+                          >
+                            Resend docs
+                          </button>
+                          <button
+                            onClick={() => void decide(r.id, "rejected")}
+                            disabled={busyId === r.id}
+                            className="px-3 py-1 rounded-lg text-xs bg-red-600 hover:bg-red-700 disabled:opacity-60"
+                          >
+                            Respinge
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {!loading && requests.length > pending.length ? (
+        <div className="text-xs text-gray-500">
+          Total cereri (inclusiv decise): {requests.length}
+        </div>
+      ) : null}
+    </div>
+  );
+}

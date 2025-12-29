@@ -10,6 +10,7 @@ export default function Header() {
   const [userMenu, setUserMenu] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [userName, setUserName] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -20,16 +21,18 @@ export default function Header() {
 
         if (token && user) {
           let display = "U";
+          let admin = false;
           try {
             const userData: unknown = JSON.parse(user);
             if (userData && typeof userData === "object") {
-              const u = userData as { fullName?: unknown; username?: unknown; email?: unknown };
+              const u = userData as { fullName?: unknown; username?: unknown; email?: unknown; role?: unknown };
               const candidate =
                 (typeof u.fullName === "string" && u.fullName) ||
                 (typeof u.username === "string" && u.username) ||
                 (typeof u.email === "string" && u.email) ||
                 "U";
               display = candidate;
+              admin = u.role === "admin";
             }
           } catch {
             display = "U";
@@ -37,13 +40,16 @@ export default function Header() {
 
           setIsLoggedIn(true);
           setUserName(display && display.length > 0 ? display : "U");
+          setIsAdmin(admin);
         } else {
           setIsLoggedIn(false);
           setUserName("U");
+          setIsAdmin(false);
         }
       } catch {
         setIsLoggedIn(false);
         setUserName("U");
+        setIsAdmin(false);
       }
     };
 
@@ -149,6 +155,20 @@ export default function Header() {
                     >
                       👤 Profilul meu
                     </Link>
+                    <Link
+                      href="/verification"
+                      className="block px-4 py-2 text-sm text-gray-300 hover:bg-slate-700 hover:text-white"
+                    >
+                      ✅ Verificare
+                    </Link>
+                    {isAdmin && (
+                      <Link
+                        href="/admin"
+                        className="block px-4 py-2 text-sm text-gray-300 hover:bg-slate-700 hover:text-white"
+                      >
+                        🛡️ Admin
+                      </Link>
+                    )}
                     <hr className="my-2 border-slate-700" />
                     <button
                       onClick={handleLogout}
@@ -249,6 +269,22 @@ export default function Header() {
                 >
                   👤 Profilul meu
                 </Link>
+                <Link
+                  href="/verification"
+                  className="block px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-slate-700/50 rounded text-center"
+                  onClick={() => setMobileMenu(false)}
+                >
+                  ✅ Verificare
+                </Link>
+                {isAdmin && (
+                  <Link
+                    href="/admin"
+                    className="block px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-slate-700/50 rounded text-center"
+                    onClick={() => setMobileMenu(false)}
+                  >
+                    🛡️ Admin
+                  </Link>
+                )}
                 <button
                   onClick={handleLogout}
                   className="w-full px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-red-700/50 rounded text-center"

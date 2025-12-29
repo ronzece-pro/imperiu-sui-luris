@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { requireAuthenticatedUser } from "@/lib/auth/require";
 import { mockDatabase } from "@/lib/db/config";
 import { errorResponse, successResponse } from "@/lib/api/response";
+import { appendAuditLog } from "@/lib/audit/persistence";
 import { createChatReport, getOrCreatePrivateRoom } from "@/lib/chat/persistence";
 
 export async function POST(request: NextRequest) {
@@ -39,6 +40,13 @@ export async function POST(request: NextRequest) {
       messageId,
       reason: reason.slice(0, 500),
       evidence: sanitizedEvidence,
+    });
+
+    appendAuditLog({
+      type: "chat_report_created",
+      actorUserId: authed.decoded.userId,
+      message: "Raport chat trimis",
+      metadata: { reportId: report.id, reportedUserId: withUserId, roomId: room.id, messageId },
     });
 
     return successResponse({ report }, "Report submitted", 201);

@@ -10,6 +10,9 @@ import AdminMetaMaskSettings from "@/components/admin/MetaMaskSettings";
 import AdminLurisManagement from "@/components/admin/LurisManagement";
 import AdminLegalPages from "@/components/admin/LegalPages";
 import AdminChatModeration from "@/components/admin/ChatModeration";
+import AdminChatReports from "@/components/admin/ChatReports";
+import AdminVerificationRequests from "@/components/admin/VerificationRequests";
+import AdminAuditLogs from "@/components/admin/AuditLogs";
 
 interface AdminStats {
   totalUsers: number;
@@ -22,6 +25,8 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [isOwner, setIsOwner] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [reportCount, setReportCount] = useState(0);
+  const [pendingVerifications, setPendingVerifications] = useState(0);
   const [stats, setStats] = useState<AdminStats>({
     totalUsers: 0,
     totalBalance: 0,
@@ -57,11 +62,36 @@ export default function AdminDashboard() {
       
       // Fetch admin stats
       fetchAdminStats();
+      fetchAdminBadges();
     } catch (error) {
       console.error("Auth error:", error);
       router.push("/auth/login");
     }
   }, [router]);
+
+  const fetchAdminBadges = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setReportCount(0);
+        setPendingVerifications(0);
+        return;
+      }
+
+      const [reportsRes, verRes] = await Promise.all([
+        fetch("/api/admin/chat/reports", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/admin/verification?limit=200", { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+
+      const reportsJson = await reportsRes.json().catch(() => null);
+      const verJson = await verRes.json().catch(() => null);
+
+      setReportCount(Number(reportsJson?.data?.reports?.length || 0));
+      setPendingVerifications(Number(verJson?.data?.pendingCount || 0));
+    } catch {
+      // ignore
+    }
+  };
 
   const fetchAdminStats = async () => {
     try {
@@ -143,6 +173,9 @@ export default function AdminDashboard() {
               { id: "users", label: "Utilizatori", icon: "👥" },
               { id: "posts", label: "Postări", icon: "📝" },
               { id: "chat", label: "Chat", icon: "💬" },
+              { id: "reports", label: "Rapoarte", icon: "🚨", badge: reportCount },
+              { id: "verifications", label: "Verificări", icon: "✅", badge: pendingVerifications },
+              { id: "audit", label: "Audit", icon: "🧾" },
               { id: "payments", label: "Plăți", icon: "💳" },
               { id: "luris", label: "Luris Points", icon: "💎" },
               { id: "legal", label: "Pagini Legale", icon: "⚖️" },
@@ -150,7 +183,10 @@ export default function AdminDashboard() {
             ].map((item) => (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => {
+                  setActiveTab(item.id);
+                  void fetchAdminBadges();
+                }}
                 className={`w-full text-left px-4 py-3 rounded-lg font-medium text-sm transition ${
                   activeTab === item.id
                     ? "bg-blue-600 text-white"
@@ -158,7 +194,14 @@ export default function AdminDashboard() {
                 }`}
               >
                 <span className="mr-3">{item.icon}</span>
-                {item.label}
+                <span className="inline-flex items-center justify-between w-[calc(100%-24px)]">
+                  <span>{item.label}</span>
+                  {typeof (item as any).badge === "number" && (item as any).badge > 0 ? (
+                    <span className="ml-2 text-[10px] leading-none px-2 py-1 rounded-full bg-red-600 text-white">
+                      {(item as any).badge}
+                    </span>
+                  ) : null}
+                </span>
               </button>
             ))}
           </nav>
@@ -266,6 +309,24 @@ export default function AdminDashboard() {
           {activeTab === "chat" && (
             <div className="p-4 sm:p-8">
               <AdminChatModeration />
+            </div>
+          )}
+
+          {activeTab === "reports" && (
+            <div className="p-4 sm:p-8">
+              <AdminChatReports />
+            </div>
+          )}
+
+          {activeTab === "verifications" && (
+            <div className="p-4 sm:p-8">
+              <AdminVerificationRequests />
+            </div>
+          )}
+
+          {activeTab === "audit" && (
+            <div className="p-4 sm:p-8">
+              <AdminAuditLogs />
             </div>
           )}
 

@@ -3,6 +3,7 @@ import { mockDatabase } from "@/lib/db/config";
 import { requireAuthenticatedUser } from "@/lib/auth/require";
 import { successResponse, errorResponse } from "@/lib/api/response";
 import { generateVerificationCode, renderDocumentHtml } from "@/lib/documents/render";
+import { appendAuditLog } from "@/lib/audit/persistence";
 import type { Document as ImperiuDocument } from "@/types";
 
 export async function GET(request: NextRequest) {
@@ -60,6 +61,20 @@ export async function POST(request: NextRequest) {
     };
 
     mockDatabase.transactions.push(transaction);
+
+    appendAuditLog({
+      type: "marketplace_purchase",
+      actorUserId: decoded.userId,
+      message: "Achiziție marketplace",
+      metadata: {
+        transactionId: transaction.id,
+        itemId,
+        itemName: item.name,
+        quantity,
+        amount: transaction.amount,
+        currency: transaction.currency,
+      },
+    });
 
     // Reduce availability
     item.availability -= quantity;

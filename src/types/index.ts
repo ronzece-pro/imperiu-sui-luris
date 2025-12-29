@@ -146,3 +146,5 @@ export interface UserStats {
 }
 
 export * from "./chat";
+export * from "./verification";
+export * from "./audit";

@@ -4,6 +4,7 @@ import Stripe from "stripe";
 import { adminDatabase } from "@/lib/admin/config";
 import { addFundsToWallet, completeMetamaskTopup, createPendingStripeTopup, deductFundsFromWallet, getOrCreateWallet } from "@/lib/wallet/persistence";
 import { requireAuthenticatedUser } from "@/lib/auth/require";
+import { appendAuditLog } from "@/lib/audit/persistence";
 import { JsonRpcProvider, getAddress } from "ethers";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", { apiVersion: "2022-11-15" });
@@ -74,6 +75,13 @@ export async function POST(request: NextRequest) {
           conversionRate,
         });
 
+        appendAuditLog({
+          type: "wallet_topup_stripe_pending",
+          actorUserId: userId,
+          message: "Stripe topup inițiat (pending)",
+          metadata: { sessionId: session.id, lurisAmount, usdAmount: amount },
+        });
+
         return successResponse({ sessionUrl: session.url, sessionId: session.id }, "Checkout created", 201);
       }
 
@@ -88,6 +96,13 @@ export async function POST(request: NextRequest) {
       }
 
       const result = await addFundsToWallet(userId, amount, { description, paymentMethod });
+
+      appendAuditLog({
+        type: "wallet_topup_stripe_completed",
+        actorUserId: userId,
+        message: "Topup wallet (direct)",
+        metadata: { amount, paymentMethod: paymentMethod || "direct", txId: (result as any)?.tx?.id },
+      });
       return successResponse(
         {
           balance: result.wallet.balance,
@@ -104,6 +119,13 @@ export async function POST(request: NextRequest) {
         const result = await deductFundsFromWallet(userId, amount, {
           description: description || "Wallet purchase",
           paymentMethod: "wallet",
+        });
+
+        appendAuditLog({
+          type: "wallet_deduct",
+          actorUserId: userId,
+          message: "Debitare wallet",
+          metadata: { amount, txId: (result as any)?.tx?.id, description: description || "Wallet purchase" },
         });
         return successResponse(
           {
@@ -217,6 +239,13 @@ export async function PUT(request: NextRequest) {
         expectedWei: expectedWei.toString(),
         chainId,
         blockNumber: receipt.blockNumber,
+      });
+
+      appendAuditLog({
+        type: "wallet_topup_metamask_completed",
+        actorUserId: decoded.userId,
+        message: "MetaMask topup confirmat",
+        metadata: { txHash, lurisAmount: Math.floor(amt), to: toChecksum, valueWei: txValue.toString() },
       });
 
       const wallet = await getOrCreateWallet(decoded.userId);
