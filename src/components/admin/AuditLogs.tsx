@@ -210,7 +210,27 @@ export default function AdminAuditLogs() {
                     </td>
                     <td className="px-4 py-3 text-gray-300">
                       <div className="max-w-2xl truncate">{l.message}</div>
-                      {l.metadata ? <div className="text-xs text-gray-500 max-w-2xl truncate">{JSON.stringify(l.metadata)}</div> : null}
+                      {(() => {
+                        const geo = l.metadata?.["geo"] as unknown;
+                        const geoObj = geo && typeof geo === "object" ? (geo as Record<string, unknown>) : null;
+                        if (!geoObj) return null;
+                        const city = geoObj["city"];
+                        const region = geoObj["region"];
+                        const country = geoObj["country"];
+                        const org = geoObj["org"];
+                        const loc = [city, region, country]
+                          .filter((x) => typeof x === "string" && x.trim().length > 0)
+                          .join(", ");
+                        return (
+                          <div className="text-xs text-gray-500 max-w-2xl truncate">
+                            Locație: {loc || "—"}
+                            {typeof org === "string" && org.trim() ? ` (${org})` : ""}
+                          </div>
+                        );
+                      })()}
+                      {l.metadata ? (
+                        <div className="text-xs text-gray-500 max-w-2xl truncate">{JSON.stringify(l.metadata)}</div>
+                      ) : null}
                     </td>
                   </tr>
                 ))}

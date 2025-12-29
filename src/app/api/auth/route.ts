@@ -16,6 +16,7 @@ import {
 import { sendEmail } from "@/lib/email/sender";
 import { authLockoutTemplate } from "@/lib/email/templates";
 import { appendAuditLog } from "@/lib/audit/persistence";
+import { lookupGeoIp } from "@/lib/geoip/lookup";
 
 export async function POST(request: NextRequest) {
   try {
@@ -132,6 +133,8 @@ export async function POST(request: NextRequest) {
         const adminEmail = "admin@imperiu-sui-luris.com";
         const token = createToken(adminUserId, adminEmail);
 
+        const geo = await lookupGeoIp(clientIp);
+
         appendAuditLog({
           type: "auth_login_success",
           actorUserId: adminUserId,
@@ -139,6 +142,7 @@ export async function POST(request: NextRequest) {
           metadata: {
             ip: clientIp,
             userAgent: request.headers.get("user-agent") || "",
+            ...(geo ? { geo } : {}),
           },
         });
 
@@ -192,6 +196,8 @@ export async function POST(request: NextRequest) {
       clearAuthFailures(attemptKey);
       const token = createToken(user.id, user.email);
 
+      const geo = await lookupGeoIp(clientIp);
+
       appendAuditLog({
         type: "auth_login_success",
         actorUserId: user.id,
@@ -199,6 +205,7 @@ export async function POST(request: NextRequest) {
         metadata: {
           ip: clientIp,
           userAgent: request.headers.get("user-agent") || "",
+          ...(geo ? { geo } : {}),
         },
       });
 

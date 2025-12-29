@@ -593,6 +593,12 @@ export default function ProfilePage() {
                   {auditLogs.map((log) => {
                     const ip = log.metadata?.["ip"];
                     const userAgent = log.metadata?.["userAgent"];
+                    const geo = log.metadata?.["geo"] as unknown;
+                    const geoObj = (geo && typeof geo === "object" ? (geo as Record<string, unknown>) : null);
+                    const geoCity = geoObj?.["city"];
+                    const geoRegion = geoObj?.["region"];
+                    const geoCountry = geoObj?.["country"];
+                    const geoOrg = geoObj?.["org"];
 
                     return (
                       <div
@@ -606,8 +612,16 @@ export default function ProfilePage() {
                           <p className="text-gray-400 text-xs">{log.type}</p>
                         </div>
                         <p className="text-gray-200 text-sm mt-1">{log.message}</p>
-                        {(Boolean(ip) || Boolean(userAgent)) && (
+                        {(Boolean(geoObj) || Boolean(ip) || Boolean(userAgent)) && (
                           <div className="mt-2 space-y-1 text-xs text-gray-400">
+                            {Boolean(geoObj) && (
+                              <p>
+                                Locație: {[geoCity, geoRegion, geoCountry]
+                                  .filter((x) => typeof x === "string" && x.trim().length > 0)
+                                  .join(", ") || "—"}
+                                {typeof geoOrg === "string" && geoOrg.trim() ? ` (${geoOrg})` : ""}
+                              </p>
+                            )}
                             {Boolean(ip) && <p>IP: {String(ip)}</p>}
                             {Boolean(userAgent) && <p className="break-all">Agent: {String(userAgent)}</p>}
                           </div>
