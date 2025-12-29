@@ -144,7 +144,14 @@ export const mockDatabase = {
   chatReports: [] as ChatReport[],
   verificationRequests: [] as VerificationRequest[],
   auditLogs: [] as AuditLogEntry[],
-  invites: [] as InviteCode[],
+  // Seed invite for initial onboarding/testing (single-use per runtime)
+  invites: [
+    {
+      code: "ISL-START2025",
+      inviterUserId: "user_admin",
+      createdAt: new Date("2025-12-29"),
+    },
+  ] as InviteCode[],
   landProperties: [
     {
       id: "land_001",
