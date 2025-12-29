@@ -9,9 +9,14 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { email, password, username, fullName, action } = body;
 
+    const emailNormalized = typeof email === "string" ? email.trim().toLowerCase() : "";
+    if (!emailNormalized) {
+      return errorResponse("Email is required", 400);
+    }
+
     if (action === "register") {
       // Check if user already exists
-      const existingUser = mockDatabase.users.find((u) => u.email === email);
+      const existingUser = mockDatabase.users.find((u) => u.email.toLowerCase() === emailNormalized);
       if (existingUser) {
         return errorResponse("User already exists", 409);
       }
@@ -25,8 +30,8 @@ export async function POST(request: NextRequest) {
 
       const newUser = {
         id: `user_${Date.now()}`,
-        email,
-        username: username || email.split("@")[0],
+        email: emailNormalized,
+        username: username || emailNormalized.split("@")[0],
         fullName: fullName || "New Citizen",
         country: "Romania",
         citizenship: "pending",
@@ -62,7 +67,7 @@ export async function POST(request: NextRequest) {
       );
     } else if (action === "login") {
       // Check if it's admin owner login
-      if (validateAdminCredentials(email, password)) {
+      if (validateAdminCredentials(emailNormalized, password)) {
         // Use the same admin identity as the rest of the app (e.g. feed permissions)
         const adminUserId = "user_admin";
         const adminEmail = "admin@imperiu-sui-luris.com";
@@ -84,7 +89,7 @@ export async function POST(request: NextRequest) {
         );
       }
       // Find regular user by email
-      const user = mockDatabase.users.find((u) => u.email === email);
+      const user = mockDatabase.users.find((u) => u.email.toLowerCase() === emailNormalized);
       if (!user) {
         return errorResponse("Invalid email or password", 401);
       }
@@ -105,7 +110,7 @@ export async function POST(request: NextRequest) {
             fullName: user.fullName,
             citizenship: user.citizenship,
             createdAt: user.createdAt,
-            role: "user",
+            role: user.role || "user",
             badge: user.badge || "citizen",
           },
           token,

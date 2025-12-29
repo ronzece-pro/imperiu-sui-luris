@@ -84,7 +84,7 @@ export const mockDatabase = {
       citizenship: "active",
       role: "admin",
       badge: "president",
-      passwordHash: bcrypt.hashSync("adminpass", 8),
+      passwordHash: bcrypt.hashSync(process.env.ADMIN_PASSWORD || "adminpass", 8),
       createdAt: new Date("2023-01-01"),
       updatedAt: new Date(),
     },
