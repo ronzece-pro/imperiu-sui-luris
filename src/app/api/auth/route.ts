@@ -4,6 +4,17 @@ import { validateAdminCredentials } from "@/lib/admin/persistence";
 import { createToken, hashPassword, verifyPassword } from "@/lib/auth/utils";
 import { consumeInviteCode } from "@/lib/invites/persistence";
 import { successResponse, errorResponse } from "@/lib/api/response";
+import { getClientIp } from "@/lib/security/ip";
+import {
+  authRateLimitConfig,
+  checkAuthLockout,
+  clearAuthFailures,
+  getAuthAttemptKey,
+  recordAuthFailure,
+  shouldSendLockoutEmail,
+} from "@/lib/security/authRateLimit";
+import { sendEmail } from "@/lib/email/sender";
+import { authLockoutTemplate } from "@/lib/email/templates";
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,9 +32,23 @@ export async function POST(request: NextRequest) {
       return errorResponse("Email is required", 400);
     }
 
+    const clientIp = getClientIp(request);
+    const attemptKey = getAuthAttemptKey({ ip: clientIp, email: emailNormalized });
+    const lock = checkAuthLockout(attemptKey);
+    if (lock.locked) {
+      return errorResponse(
+        `Prea multe încercări. Încearcă din nou peste ${Math.ceil(lock.retryAfterSeconds / 60)} minute.`,
+        429,
+        {
+          "Retry-After": String(lock.retryAfterSeconds),
+        }
+      );
+    }
+
     if (body.action === "register") {
       const existingUser = mockDatabase.users.find((u) => u.email.toLowerCase() === emailNormalized);
       if (existingUser) {
+        recordAuthFailure(attemptKey);
         return errorResponse("User already exists", 409);
       }
 
@@ -34,12 +59,14 @@ export async function POST(request: NextRequest) {
 
       const inviteCodeRaw = typeof body.inviteCode === "string" ? body.inviteCode : "";
       if (!inviteCodeRaw.trim()) {
+        recordAuthFailure(attemptKey);
         return errorResponse("Cod de invitație obligatoriu", 400);
       }
 
       const newUserId = `user_${Date.now()}`;
       const consumed = consumeInviteCode(inviteCodeRaw, newUserId);
       if (!consumed.ok) {
+        recordAuthFailure(attemptKey);
         return errorResponse(consumed.error, consumed.status);
       }
 
@@ -72,6 +99,8 @@ export async function POST(request: NextRequest) {
 
       mockDatabase.users.push(newUser);
 
+      clearAuthFailures(attemptKey);
+
       const token = createToken(newUser.id, newUser.email);
       return successResponse(
         {
@@ -97,6 +126,7 @@ export async function POST(request: NextRequest) {
       const passwordStr = typeof body.password === "string" ? body.password : "";
 
       if (validateAdminCredentials(emailNormalized, passwordStr)) {
+        clearAuthFailures(attemptKey);
         const adminUserId = "user_admin";
         const adminEmail = "admin@imperiu-sui-luris.com";
         const token = createToken(adminUserId, adminEmail);
@@ -120,6 +150,7 @@ export async function POST(request: NextRequest) {
 
       const user = mockDatabase.users.find((u) => u.email.toLowerCase() === emailNormalized);
       if (!user) {
+        recordAuthFailure(attemptKey);
         return errorResponse("Invalid email or password", 401);
       }
 
@@ -129,9 +160,24 @@ export async function POST(request: NextRequest) {
 
       const isValid = verifyPassword(passwordStr, (user as any).passwordHash || "");
       if (!isValid) {
+        const failure = recordAuthFailure(attemptKey);
+        if (failure.lockedNow && shouldSendLockoutEmail(attemptKey)) {
+          const tmpl = authLockoutTemplate({
+            email: user.email,
+            ip: clientIp,
+            minutes: Math.round(authRateLimitConfig.LOCK_MS / 60000),
+          });
+          await sendEmail({
+            to: user.email,
+            subject: tmpl.subject,
+            text: tmpl.text,
+            html: tmpl.html,
+          });
+        }
         return errorResponse("Invalid email or password", 401);
       }
 
+      clearAuthFailures(attemptKey);
       const token = createToken(user.id, user.email);
       return successResponse(
         {

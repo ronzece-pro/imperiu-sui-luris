@@ -20,14 +20,14 @@ export function successResponse<T>(data: T, message?: string, statusCode = 200):
   );
 }
 
-export function errorResponse(error: string, statusCode = 400): NextResponse {
+export function errorResponse(error: string, statusCode = 400, headers?: HeadersInit): NextResponse {
   return NextResponse.json(
     {
       success: false,
       error,
       statusCode,
     },
-    { status: statusCode }
+    { status: statusCode, headers }
   );
 }
 

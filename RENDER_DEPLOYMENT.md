@@ -53,6 +53,13 @@ EVM_RPC_URL=https://your-rpc-provider
 METAMASK_WEI_PER_LURIS=1000000000000000
 # optional
 METAMASK_CHAIN_ID=1
+
+# Email (Resend) - recomandat pentru început
+# 1) Fă cont pe https://resend.com
+# 2) Adaugă un domeniu și verifică DNS (SPF/DKIM) sau folosește domeniul pus la dispoziție de ei
+# 3) Generează API key și setează:
+RESEND_API_KEY=re_...
+EMAIL_FROM="Imperiu <no-reply@domeniul-tau.ro>"
 ```
 
 ### 5. **Deploy Automat din GitHub**
@@ -103,7 +110,10 @@ NEXT_PUBLIC_STRIPE_PUBLIC_KEY=pk_live_...
 METAMASK_WALLET=0xYourReceivingWallet
 EVM_RPC_URL=https://your-rpc-provider
 METAMASK_WEI_PER_LURIS=1000000000000000
-SENDGRID_API_KEY=...
+
+# Email (Resend)
+RESEND_API_KEY=re_...
+EMAIL_FROM="Imperiu <no-reply@domeniul-tau.ro>"
 ```
 
 ---
