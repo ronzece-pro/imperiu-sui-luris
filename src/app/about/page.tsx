@@ -74,7 +74,10 @@ export default function AboutPage() {
               <div className="text-gray-400">Conținut indisponibil.</div>
             ) : (
               <>
-                <h1 className="text-2xl sm:text-4xl font-bold text-white font-[var(--font-brand)] tracking-[0.08em]">
+                <h1
+                  className="text-2xl sm:text-4xl font-bold text-white tracking-[0.08em]"
+                  style={{ fontFamily: "var(--font-brand)" }}
+                >
                   {about.title || "Despre"}
                 </h1>
                 {about.subtitle ? <p className="text-gray-300 mt-2">{about.subtitle}</p> : null}

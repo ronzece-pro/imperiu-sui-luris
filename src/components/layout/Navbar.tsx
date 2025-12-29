@@ -194,7 +194,10 @@ export default function Header() {
               />
             </div>
             <span className="hidden sm:inline whitespace-nowrap">
-              <span className="relative inline-block font-[var(--font-brand)] font-bold uppercase tracking-[0.22em] text-sm sm:text-lg leading-none">
+              <span
+                className="relative inline-block font-bold uppercase tracking-[0.22em] text-sm sm:text-lg leading-none"
+                style={{ fontFamily: "var(--font-brand)" }}
+              >
                 <Wordmark
                   className="pointer-events-none select-none absolute inset-0 text-red-500/30 blur-[1.75px] translate-x-[-1px] translate-y-[1px]"
                   aria-hidden="true"
