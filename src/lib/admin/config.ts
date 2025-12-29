@@ -143,6 +143,15 @@ Vânzările neautorizate sunt interzise.
     retentionDays: 15,
     maxEntries: 5000,
   },
+
+  // Email settings (Resend)
+  emailSettings: {
+    provider: "resend" as const,
+    resendApiKey: process.env.RESEND_API_KEY || "",
+    emailFrom: process.env.EMAIL_FROM || "",
+    enabled: !!(process.env.RESEND_API_KEY && process.env.EMAIL_FROM),
+    updatedAt: new Date().toISOString(),
+  },
 };
 
 // Helper function to log admin actions

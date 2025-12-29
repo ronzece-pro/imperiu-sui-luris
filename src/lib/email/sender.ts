@@ -6,8 +6,7 @@ type SendEmailInput = {
 };
 
 export async function sendEmail(input: SendEmailInput): Promise<{ ok: true } | { ok: false; error: string }> {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.EMAIL_FROM;
+  const { apiKey, from } = getEmailConfig();
 
   if (!apiKey || !from) {
     // No-op in dev / when not configured.
@@ -40,4 +39,26 @@ export async function sendEmail(input: SendEmailInput): Promise<{ ok: true } | {
     const msg = e instanceof Error ? e.message : "Unknown error";
     return { ok: false, error: msg };
   }
+}
+
+function getEmailConfig(): { apiKey: string; from: string } {
+  const envKey = process.env.RESEND_API_KEY || "";
+  const envFrom = process.env.EMAIL_FROM || "";
+  if (envKey && envFrom) return { apiKey: envKey, from: envFrom };
+
+  try {
+    // Fallback to in-app admin settings (runtime only; not persisted across restarts).
+    // Import lazily to avoid unnecessary coupling when email isn't used.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { adminDatabase } = require("@/lib/admin/config") as typeof import("@/lib/admin/config");
+    const settings = (adminDatabase as any).emailSettings;
+    const key = typeof settings?.resendApiKey === "string" ? settings.resendApiKey : "";
+    const from = typeof settings?.emailFrom === "string" ? settings.emailFrom : "";
+    const enabled = Boolean(settings?.enabled);
+    if (enabled && key && from) return { apiKey: key, from };
+  } catch {
+    // ignore
+  }
+
+  return { apiKey: "", from: "" };
 }
