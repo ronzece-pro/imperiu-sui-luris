@@ -79,7 +79,7 @@ export default function MarketplacePage() {
       } else {
         alert(data.error || "Purchase failed");
       }
-    } catch (error) {
+    } catch {
       alert("Error processing purchase");
     }
   };

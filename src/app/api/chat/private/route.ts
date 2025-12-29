@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { requireAuthenticatedUser } from "@/lib/auth/require";
 import { mockDatabase } from "@/lib/db/config";
 import { errorResponse, successResponse } from "@/lib/api/response";
+import type { ChatAttachment, ChatMessage } from "@/types";
 import {
   cleanupChatMessages,
   createMessage,
@@ -14,13 +15,17 @@ import {
   validateAndNormalizeMessageInput,
 } from "@/lib/chat/persistence";
 
-function parseEncrypted(body: any) {
-  const enc = body?.encrypted;
+type MockUser = (typeof mockDatabase.users)[number];
+
+function parseEncrypted(body: unknown) {
+  const root = body && typeof body === "object" ? (body as Record<string, unknown>) : null;
+  const enc = root?.encrypted;
   if (!enc) return null;
-  const v = enc?.v;
-  const algorithm = enc?.algorithm;
-  const iv = enc?.iv;
-  const ciphertext = enc?.ciphertext;
+  const encObj = enc && typeof enc === "object" ? (enc as Record<string, unknown>) : null;
+  const v = encObj?.v;
+  const algorithm = encObj?.algorithm;
+  const iv = encObj?.iv;
+  const ciphertext = encObj?.ciphertext;
   if (v !== 1) return { ok: false as const, error: "Unsupported encrypted version" };
   if (algorithm !== "AES-GCM") return { ok: false as const, error: "Unsupported encryption algorithm" };
   if (typeof iv !== "string" || typeof ciphertext !== "string") {
@@ -31,10 +36,12 @@ function parseEncrypted(body: any) {
   if (ciphertext.length < 8 || ciphertext.length > 4 * 1024 * 1024) {
     return { ok: false as const, error: "Ciphertext too large" };
   }
-  return { ok: true as const, encrypted: { v: 1 as const, algorithm: "AES-GCM" as const, iv, ciphertext } };
+
+  const encrypted: ChatMessage["encrypted"] = { v: 1, algorithm: "AES-GCM", iv, ciphertext };
+  return { ok: true as const, encrypted };
 }
 
-function enrichMessages(messages: any[]) {
+function enrichMessages(messages: ChatMessage[]) {
   const byId = new Map(mockDatabase.users.map((u) => [u.id, u] as const));
   return messages.map((m) => {
     const sender = byId.get(m.senderId);
@@ -44,7 +51,7 @@ function enrichMessages(messages: any[]) {
         ? {
             id: sender.id,
             name: sender.fullName || sender.username || sender.email,
-            isVerified: Boolean((sender as any).isVerified),
+            isVerified: Boolean((sender as MockUser).isVerified),
             badge: sender.badge || "citizen",
           }
         : { id: m.senderId, name: "Unknown", isVerified: false, badge: "citizen" },
@@ -67,7 +74,7 @@ export async function GET(request: NextRequest) {
     if (withUserId === authed.decoded.userId) return errorResponse("Invalid withUserId", 400);
 
     const other = mockDatabase.users.find((u) => u.id === withUserId);
-    if (!other || (other as any).accountStatus === "deleted") return errorResponse("User not found", 404);
+    if (!other || (other as MockUser).accountStatus === "deleted") return errorResponse("User not found", 404);
 
     const blocked = isUserBlocked(authed.decoded.userId, withUserId);
 
@@ -97,7 +104,7 @@ export async function POST(request: NextRequest) {
     if (withUserId === authed.decoded.userId) return errorResponse("Invalid withUserId", 400);
 
     const other = mockDatabase.users.find((u) => u.id === withUserId);
-    if (!other || (other as any).accountStatus === "deleted") return errorResponse("User not found", 404);
+    if (!other || (other as MockUser).accountStatus === "deleted") return errorResponse("User not found", 404);
 
     if (isUserBlocked(authed.decoded.userId, withUserId)) {
       return errorResponse("Chat indisponibil: utilizator blocat", 403);
@@ -107,8 +114,8 @@ export async function POST(request: NextRequest) {
 
     const encParsed = parseEncrypted(body);
     let text = "";
-    let attachments: any[] | undefined = undefined;
-    let encrypted: any = undefined;
+    let attachments: ChatAttachment[] | undefined = undefined;
+    let encrypted: ChatMessage["encrypted"] | undefined = undefined;
 
     if (encParsed) {
       if (!encParsed.ok) return errorResponse(encParsed.error, 400);

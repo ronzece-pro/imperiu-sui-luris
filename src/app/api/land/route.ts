@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { mockDatabase } from "@/lib/db/config";
 import { requireAuthenticatedUser } from "@/lib/auth/require";
-import { successResponse, errorResponse, authErrorResponse } from "@/lib/api/response";
+import { successResponse, errorResponse } from "@/lib/api/response";
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     // Get all available land properties for public view
     const allLands = mockDatabase.landProperties.filter((l) => l.status === "active");
     return successResponse(allLands);
-  } catch (error) {
+  } catch {
     return errorResponse("Internal server error", 500);
   }
 }
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     }
 
     return errorResponse("Invalid action", 400);
-  } catch (error) {
+  } catch {
     return errorResponse("Internal server error", 500);
   }
 }
@@ -99,7 +99,7 @@ export async function PUT(request: NextRequest) {
     // Update land property
     Object.assign(land, updateData, { updatedAt: new Date() });
     return successResponse(land, "Land property updated successfully");
-  } catch (error) {
+  } catch {
     return errorResponse("Internal server error", 500);
   }
 }
@@ -129,7 +129,7 @@ export async function DELETE(request: NextRequest) {
     // Mark as sold/deleted instead of removing
     land.status = "sold";
     return successResponse(null, "Land property deleted successfully");
-  } catch (error) {
+  } catch {
     return errorResponse("Internal server error", 500);
   }
 }

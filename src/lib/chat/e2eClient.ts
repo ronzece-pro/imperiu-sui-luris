@@ -38,7 +38,7 @@ async function idbPut<T>(key: string, value: T): Promise<void> {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE, "readwrite");
     const store = tx.objectStore(STORE);
-    const req = store.put(value as any, key);
+    const req = store.put(value, key);
     req.onsuccess = () => resolve();
     req.onerror = () => reject(req.error);
     tx.oncomplete = () => db.close();
@@ -145,7 +145,7 @@ export async function encryptPrivateMessage(params: {
   otherPublicJwk: JsonWebKey;
   myUserId: string;
   otherUserId: string;
-  payload: any;
+  payload: unknown;
 }) {
   const myPrivateKey = await importPrivateKey(params.myPrivateJwk);
   const otherPublicKey = await importPublicKey(params.otherPublicJwk);

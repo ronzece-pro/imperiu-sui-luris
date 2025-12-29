@@ -22,13 +22,7 @@ export async function GET(request: NextRequest) {
     const admin = requireAdmin(request);
     if (!admin.ok) return admin.response;
 
-    const emailSettings = (adminDatabase as any).emailSettings || {
-      provider: "resend",
-      resendApiKey: "",
-      emailFrom: "",
-      enabled: false,
-      updatedAt: new Date().toISOString(),
-    };
+    const emailSettings = adminDatabase.emailSettings;
 
     // Don't leak full secrets to the client.
     const masked = emailSettings.resendApiKey
@@ -60,13 +54,7 @@ export async function PUT(request: NextRequest) {
       enabled?: unknown;
     };
 
-    const current = (adminDatabase as any).emailSettings || {
-      provider: "resend",
-      resendApiKey: "",
-      emailFrom: "",
-      enabled: false,
-      updatedAt: new Date().toISOString(),
-    };
+    const current = adminDatabase.emailSettings;
 
     const resendApiKey = typeof body.resendApiKey === "string" ? body.resendApiKey.trim() : "";
     const emailFrom = typeof body.emailFrom === "string" ? body.emailFrom.trim() : "";
@@ -76,7 +64,7 @@ export async function PUT(request: NextRequest) {
       return errorResponse("Pentru a activa email, setează RESEND_API_KEY și EMAIL_FROM", 400);
     }
 
-    (adminDatabase as any).emailSettings = {
+    adminDatabase.emailSettings = {
       ...current,
       provider: "resend",
       resendApiKey: resendApiKey || current.resendApiKey,

@@ -4,6 +4,8 @@ import { requireAuthenticatedUser } from "@/lib/auth/require";
 import { mockDatabase } from "@/lib/db/config";
 import { errorResponse, successResponse } from "@/lib/api/response";
 
+type UserRow = (typeof mockDatabase.users)[number] & { accountStatus?: string };
+
 function getUserIdParam(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   return (searchParams.get("userId") || "").trim();
@@ -16,7 +18,8 @@ export async function GET(request: NextRequest) {
 
     const requestedUserId = getUserIdParam(request) || authed.decoded.userId;
     const user = mockDatabase.users.find((u) => u.id === requestedUserId);
-    if (!user || (user as any).accountStatus === "deleted") return errorResponse("User not found", 404);
+    const status = (user as UserRow | undefined)?.accountStatus;
+    if (!user || status === "deleted") return errorResponse("User not found", 404);
 
     const key = mockDatabase.chatPublicKeys.find((k) => k.userId === requestedUserId);
     return successResponse({

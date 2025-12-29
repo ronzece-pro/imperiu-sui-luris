@@ -5,6 +5,8 @@ import { mockDatabase } from "@/lib/db/config";
 import { errorResponse, successResponse } from "@/lib/api/response";
 import { getOrCreatePrivateRoom } from "@/lib/chat/persistence";
 
+type MockUser = (typeof mockDatabase.users)[number];
+
 const MIN_SECONDS = 60;
 const MAX_SECONDS = 7 * 24 * 60 * 60;
 
@@ -19,7 +21,7 @@ export async function PUT(request: NextRequest) {
     if (withUserId === authed.decoded.userId) return errorResponse("Invalid withUserId", 400);
 
     const other = mockDatabase.users.find((u) => u.id === withUserId);
-    if (!other || (other as any).accountStatus === "deleted") return errorResponse("User not found", 404);
+    if (!other || (other as MockUser).accountStatus === "deleted") return errorResponse("User not found", 404);
 
     const room = getOrCreatePrivateRoom(authed.decoded.userId, withUserId);
 

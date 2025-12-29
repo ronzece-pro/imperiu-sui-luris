@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     if (!doc) return errorResponse("Document not found", 404);
 
-    const expected = (doc as any).verificationCode;
+    const expected = doc.verificationCode;
     if (typeof expected !== "string" || expected.length === 0) {
       return errorResponse("Document is not verifiable", 400);
     }

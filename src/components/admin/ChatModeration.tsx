@@ -47,7 +47,7 @@ export default function AdminChatModeration() {
 
   useEffect(() => {
     void fetchMessages();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   const setBlocked = async (id: string, blocked: boolean) => {

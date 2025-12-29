@@ -15,6 +15,18 @@ type ClientNotification = {
   readAt?: string;
 };
 
+function Wordmark({ className, ...rest }: React.HTMLAttributes<HTMLSpanElement>) {
+  return (
+    <span className={className} {...rest}>
+      <span className="inline-flex items-baseline whitespace-nowrap">
+        <span>IMPERIUL</span>
+        <span style={{ marginLeft: "0.58em" }}>SUI</span>
+        <span style={{ marginLeft: "0.20em" }}>JURIS</span>
+      </span>
+    </span>
+  );
+}
+
 export default function Header() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userMenu, setUserMenu] = useState(false);
@@ -143,15 +155,18 @@ export default function Header() {
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("auth-changed", onAuthChanged as EventListener);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   useEffect(() => {
     if (!isLoggedIn) return;
-    void fetchNotifications();
-    const t = setInterval(() => void fetchNotifications(), 15000);
-    return () => clearInterval(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const initial = setTimeout(() => void fetchNotifications(), 0);
+    const interval = setInterval(() => void fetchNotifications(), 15000);
+    return () => {
+      clearTimeout(initial);
+      clearInterval(interval);
+    };
+     
   }, [isLoggedIn]);
 
   const handleLogout = () => {
@@ -164,16 +179,6 @@ export default function Header() {
     setMobileMenu(false);
     router.push("/");
   };
-
-  const Wordmark = ({ className, ...rest }: React.HTMLAttributes<HTMLSpanElement>) => (
-    <span className={className} {...rest}>
-      <span className="inline-flex items-baseline whitespace-nowrap">
-        <span>IMPERIUL</span>
-        <span style={{ marginLeft: "0.58em" }}>SUI</span>
-        <span style={{ marginLeft: "0.20em" }}>JURIS</span>
-      </span>
-    </span>
-  );
 
   return (
     <nav className="bg-black bg-opacity-40 backdrop-blur-lg border-b border-slate-700 sticky top-0 z-50">

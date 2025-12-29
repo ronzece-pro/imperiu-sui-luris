@@ -12,6 +12,18 @@ type EmailSettingsResponse = {
   };
 };
 
+type ApiResponse<T> = {
+  success?: boolean;
+  data?: T;
+  error?: string;
+};
+
+type EmailSettingsPayload = {
+  enabled: boolean;
+  emailFrom: string;
+  resendApiKey?: string;
+};
+
 export default function AdminEmailSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -36,13 +48,17 @@ export default function AdminEmailSettings() {
       }
 
       const res = await fetch("/api/admin/email", { headers: { Authorization: `Bearer ${token}` } });
-      const json = (await res.json().catch(() => null)) as any;
+      const json = (await res.json().catch(() => null)) as ApiResponse<EmailSettingsResponse> | null;
       if (!res.ok || !json?.success) {
         setMessage(json?.error || "Eroare la încărcare");
         return;
       }
 
-      const data = json.data as EmailSettingsResponse;
+      const data = json.data;
+      if (!data) {
+        setMessage("Eroare la încărcare");
+        return;
+      }
       setEnabled(Boolean(data.emailSettings.enabled));
       setEmailFrom(data.emailSettings.emailFrom || "");
       setMasked(data.emailSettings.resendApiKeyMasked || "");
@@ -64,7 +80,7 @@ export default function AdminEmailSettings() {
         return;
       }
 
-      const payload: any = {
+      const payload: EmailSettingsPayload = {
         enabled,
         emailFrom,
       };
@@ -80,7 +96,7 @@ export default function AdminEmailSettings() {
         body: JSON.stringify(payload),
       });
 
-      const json = (await res.json().catch(() => null)) as any;
+      const json = (await res.json().catch(() => null)) as ApiResponse<unknown> | null;
       if (!res.ok || !json?.success) {
         setMessage(json?.error || "Eroare la salvare");
         return;

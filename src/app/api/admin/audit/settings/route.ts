@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     const admin = requireAdmin(request);
     if (!admin.ok) return admin.response;
 
-    const auditSettings = (adminDatabase as any).auditSettings || { retentionDays: 15, maxEntries: 5000 };
+    const auditSettings = adminDatabase.auditSettings;
     return successResponse({ auditSettings });
   } catch {
     return errorResponse("Internal server error", 500);
@@ -42,14 +42,14 @@ export async function PUT(request: NextRequest) {
 
     const body = (await request.json()) as { retentionDays?: unknown; maxEntries?: unknown };
 
-    const prev = (adminDatabase as any).auditSettings || { retentionDays: 15, maxEntries: 5000 };
+    const prev = adminDatabase.auditSettings;
 
     const retentionDays = clampInt(body.retentionDays, 1, 365, prev.retentionDays);
     const maxEntries = clampInt(body.maxEntries, 100, 100000, prev.maxEntries);
 
-    (adminDatabase as any).auditSettings = { retentionDays, maxEntries };
+    adminDatabase.auditSettings = { retentionDays, maxEntries };
 
-    return successResponse({ auditSettings: (adminDatabase as any).auditSettings }, "Updated");
+    return successResponse({ auditSettings: adminDatabase.auditSettings }, "Updated");
   } catch {
     return errorResponse("Internal server error", 500);
   }

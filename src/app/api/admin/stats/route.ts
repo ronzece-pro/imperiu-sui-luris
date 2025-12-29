@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { mockDatabase } from "@/lib/db/config";
 import { requireAuthenticatedUser } from "@/lib/auth/require";
-import { authErrorResponse, errorResponse, successResponse } from "@/lib/api/response";
+import { errorResponse, successResponse } from "@/lib/api/response";
 
 function requireAdmin(request: NextRequest) {
   const authed = requireAuthenticatedUser(request);
@@ -20,7 +20,10 @@ export async function GET(request: NextRequest) {
   if (!admin.ok) return admin.response;
 
   const totalUsers = mockDatabase.users.length;
-  const totalBalance = mockDatabase.users.reduce((sum, u) => sum + (typeof (u as any).totalFunds === "number" ? (u as any).totalFunds : 0), 0);
+  const totalBalance = mockDatabase.users.reduce((sum, u) => {
+    const funds = (u as { totalFunds?: unknown }).totalFunds;
+    return sum + (typeof funds === "number" ? funds : 0);
+  }, 0);
   const totalTransactions = mockDatabase.transactions.length;
   const totalPosts = mockDatabase.marketplaceItems.length;
 

@@ -188,7 +188,7 @@ export default function ProfilePage() {
       } else {
         setMessage(data.error || "Eroare la actualizare");
       }
-    } catch (error) {
+    } catch {
       setMessage("Eroare la salvare");
     }
   };
@@ -215,14 +215,30 @@ export default function ProfilePage() {
       setInviteCode(data.data?.activeInviteCode || null);
       const rawInvitees = Array.isArray(data.data?.invitedUsers) ? data.data.invitedUsers : [];
       setInvitees(
-        rawInvitees.map((u: any) => ({
-          id: String(u.id || ""),
-          fullName: String(u.fullName || u.username || u.email || ""),
-          email: String(u.email || ""),
-          createdAt: u.createdAt ? new Date(u.createdAt).toISOString().split("T")[0] : "",
-        }))
+        rawInvitees.map((u: unknown) => {
+          const obj = u && typeof u === "object" ? (u as Record<string, unknown>) : {};
+          const idRaw = obj.id;
+          const fullNameRaw = obj.fullName;
+          const usernameRaw = obj.username;
+          const emailRaw = obj.email;
+          const createdAtRaw = obj.createdAt;
+
+          return {
+            id: typeof idRaw === "string" ? idRaw : String(idRaw ?? ""),
+            fullName:
+              typeof fullNameRaw === "string"
+                ? fullNameRaw
+                : typeof usernameRaw === "string"
+                  ? usernameRaw
+                  : typeof emailRaw === "string"
+                    ? emailRaw
+                    : "",
+            email: typeof emailRaw === "string" ? emailRaw : String(emailRaw ?? ""),
+            createdAt: createdAtRaw ? new Date(String(createdAtRaw)).toISOString().split("T")[0] : "",
+          };
+        })
       );
-    } catch (e) {
+    } catch {
       setInvitesMessage("Eroare la încărcarea invitațiilor");
     } finally {
       setInvitesLoading(false);
@@ -252,7 +268,7 @@ export default function ProfilePage() {
       setInviteCode(data.data?.activeInviteCode || null);
       setInvitesMessage("Cod generat");
       setTimeout(() => setInvitesMessage(""), 2500);
-    } catch (e) {
+    } catch {
       setInvitesMessage("Eroare la generare");
     } finally {
       setInvitesLoading(false);

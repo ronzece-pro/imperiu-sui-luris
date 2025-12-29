@@ -1,4 +1,5 @@
 import { mockDatabase } from "@/lib/db/config";
+import type { ChatReport } from "@/types";
 import type { ChatAttachment, ChatMessage, ChatRoom, ChatRoomType } from "@/types";
 
 const GLOBAL_ROOM_ID = "global";
@@ -247,7 +248,7 @@ export function createChatReport(params: {
   reason: string;
   evidence?: { messageText?: string; createdAt?: string };
 }) {
-  const report = {
+  const report: ChatReport = {
     id: `rep_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     reporterUserId: params.reporterUserId,
     reportedUserId: params.reportedUserId,
@@ -257,7 +258,7 @@ export function createChatReport(params: {
     evidence: params.evidence,
     createdAt: new Date(),
   };
-  mockDatabase.chatReports.push(report as any);
+  mockDatabase.chatReports.push(report);
   return report;
 }
 

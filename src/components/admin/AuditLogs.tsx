@@ -64,7 +64,7 @@ export default function AdminAuditLogs() {
   useEffect(() => {
     void fetchLogs();
     void fetchSettings();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   const saveSettings = async () => {

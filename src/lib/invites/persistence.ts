@@ -2,6 +2,8 @@ import crypto from "crypto";
 import { mockDatabase } from "@/lib/db/config";
 import type { InviteCode } from "@/types";
 
+type UserRow = (typeof mockDatabase.users)[number] & { invitedByUserId?: string };
+
 function normalizeInviteCode(code: string) {
   return code.trim().toUpperCase();
 }
@@ -65,7 +67,7 @@ export function consumeInviteCode(inviteCodeRaw: string, usedByUserId: string):
 
 export function listInvitedUsers(inviterUserId: string) {
   return mockDatabase.users
-    .filter((u) => (u as any).invitedByUserId === inviterUserId)
+    .filter((u) => (u as UserRow).invitedByUserId === inviterUserId)
     .map((u) => ({
       id: u.id,
       email: u.email,

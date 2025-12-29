@@ -105,7 +105,7 @@ export default function AdminVerificationRequests() {
 
   useEffect(() => {
     void fetchAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   const decide = async (id: string, status: Exclude<VerificationStatus, "pending">) => {

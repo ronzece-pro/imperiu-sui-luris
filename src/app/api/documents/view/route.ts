@@ -25,11 +25,12 @@ export async function GET(request: NextRequest) {
     const owner = mockDatabase.users.find((u) => u.id === doc.userId);
     const fullName = owner?.fullName || owner?.username || owner?.email || "Unknown";
 
-    const anyDoc = doc as any;
-    if (typeof anyDoc.verificationCode !== "string" || anyDoc.verificationCode.length === 0) {
-      anyDoc.verificationCode = generateVerificationCode();
+    if (typeof doc.verificationCode !== "string" || doc.verificationCode.length === 0) {
+      doc.verificationCode = generateVerificationCode();
       doc.updatedAt = new Date();
     }
+
+    const verificationCode = doc.verificationCode;
 
     if (typeof doc.html !== "string" || doc.html.length === 0) {
       doc.html = renderDocumentHtml({
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
         documentNumber: doc.documentNumber,
         issueDate: doc.issueDate,
         expiryDate: doc.expiryDate,
-        verificationCode: anyDoc.verificationCode,
+        verificationCode: typeof verificationCode === "string" ? verificationCode : "",
       });
       doc.updatedAt = new Date();
     }

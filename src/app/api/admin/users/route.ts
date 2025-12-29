@@ -1,10 +1,16 @@
 import { NextRequest } from "next/server";
 import { mockDatabase } from "@/lib/db/config";
-import { authErrorResponse, errorResponse, successResponse } from "@/lib/api/response";
+import { errorResponse, successResponse } from "@/lib/api/response";
 import { getBadgeLabel, isUserBadge, type UserBadge } from "@/lib/users/badges";
 import { requireAuthenticatedUser } from "@/lib/auth/require";
 
 type AdminUserAction = "block" | "unblock" | "ban" | "unban" | "delete";
+
+type UserRow = (typeof mockDatabase.users)[number] & {
+  accountStatus?: string;
+  invitedByUserId?: string;
+  isVerified?: boolean;
+};
 
 function isAdminUserAction(value: unknown): value is AdminUserAction {
   return value === "block" || value === "unblock" || value === "ban" || value === "unban" || value === "delete";
@@ -27,11 +33,11 @@ export async function GET(request: NextRequest) {
   if (!admin.ok) return admin.response;
 
   const users = mockDatabase.users
-    .filter((u) => (u as any).accountStatus !== "deleted")
+    .filter((u) => (u as UserRow).accountStatus !== "deleted")
     .map((u) => {
-      const invitedByUserId = (u as any).invitedByUserId as string | undefined;
+      const invitedByUserId = (u as UserRow).invitedByUserId;
       const inviter = invitedByUserId ? mockDatabase.users.find((x) => x.id === invitedByUserId) : undefined;
-      const inviteesCount = mockDatabase.users.filter((x) => (x as any).invitedByUserId === u.id).length;
+      const inviteesCount = mockDatabase.users.filter((x) => (x as UserRow).invitedByUserId === u.id).length;
 
       return {
         badge: (u.badge || "citizen") as UserBadge,
@@ -40,8 +46,8 @@ export async function GET(request: NextRequest) {
         username: u.username,
         fullName: u.fullName,
         citizenship: u.citizenship,
-        accountStatus: (u as any).accountStatus || "active",
-        isVerified: Boolean((u as any).isVerified),
+        accountStatus: (u as UserRow).accountStatus || "active",
+        isVerified: Boolean((u as UserRow).isVerified),
         role: u.role || "user",
         badgeLabel: getBadgeLabel((u.badge || "citizen") as UserBadge),
         invitedByUserId: invitedByUserId || null,
@@ -70,6 +76,7 @@ export async function PUT(request: NextRequest) {
 
   const user = mockDatabase.users.find((u) => u.id === userId);
   if (!user) return errorResponse("User not found", 404);
+  const userRow = user as UserRow;
 
   if (user.id === "user_admin") {
     if (body.userAction !== undefined) {
@@ -83,13 +90,13 @@ export async function PUT(request: NextRequest) {
     }
     const action = body.userAction;
     if (action === "delete") {
-      (user as any).accountStatus = "deleted";
+      userRow.accountStatus = "deleted";
     } else if (action === "block") {
-      (user as any).accountStatus = "blocked";
+      userRow.accountStatus = "blocked";
     } else if (action === "ban") {
-      (user as any).accountStatus = "banned";
+      userRow.accountStatus = "banned";
     } else {
-      (user as any).accountStatus = "active";
+      userRow.accountStatus = "active";
     }
   }
 
@@ -104,12 +111,12 @@ export async function PUT(request: NextRequest) {
     if (typeof body.isVerified !== "boolean") {
       return errorResponse("Invalid isVerified", 400);
     }
-    (user as any).isVerified = body.isVerified;
+    userRow.isVerified = body.isVerified;
   }
 
   user.updatedAt = new Date();
 
-  if ((user as any).accountStatus === "deleted") {
+  if (userRow.accountStatus === "deleted") {
     return successResponse({ id: user.id, accountStatus: "deleted", updatedAt: user.updatedAt }, "User deleted");
   }
 
@@ -120,8 +127,8 @@ export async function PUT(request: NextRequest) {
       id: user.id,
       badge,
       badgeLabel: getBadgeLabel(badge),
-      accountStatus: (user as any).accountStatus || "active",
-      isVerified: Boolean((user as any).isVerified),
+      accountStatus: userRow.accountStatus || "active",
+      isVerified: Boolean(userRow.isVerified),
       updatedAt: user.updatedAt,
     },
     "User updated"

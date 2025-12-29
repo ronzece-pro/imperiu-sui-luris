@@ -24,7 +24,8 @@ interface Props {
   onClose?: () => void;
 }
 
-export default function AdminUserManagement({ onClose }: Props) {
+export default function AdminUserManagement({ onClose: _onClose }: Props) {
+  void _onClose;
   const [users, setUsers] = useState<UserRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -35,7 +36,7 @@ export default function AdminUserManagement({ onClose }: Props) {
 
   useEffect(() => {
     void fetchUsers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   const fetchUsers = async () => {

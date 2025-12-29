@@ -1,11 +1,9 @@
-import { NextRequest } from "next/server";
-
 import { successResponse, errorResponse } from "@/lib/api/response";
 import { adminDatabase } from "@/lib/admin/config";
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
-    const about = (adminDatabase as any)?.pages?.about;
+    const about = adminDatabase.pages.about;
     return successResponse({ about });
   } catch {
     return errorResponse("Internal server error", 500);

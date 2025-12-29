@@ -83,7 +83,7 @@ export default function VerificationPage() {
   useEffect(() => {
     if (!token) return;
     void load(token);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [token]);
 
   const submit = async () => {

@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, limit)
       .map((m) => {
-        let participants: any = undefined;
+        let participants: Array<{ id: string; name: string }> | undefined;
         if (m.roomType === "private") {
           const room = mockDatabase.chatRooms.find((r) => r.id === m.roomId);
           participants = Array.isArray(room?.participantIds)

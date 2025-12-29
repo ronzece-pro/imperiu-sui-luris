@@ -6,30 +6,34 @@ import { errorResponse, successResponse } from "@/lib/api/response";
 import { appendAuditLog } from "@/lib/audit/persistence";
 import { createChatReport, getOrCreatePrivateRoom } from "@/lib/chat/persistence";
 
+type UserRow = (typeof mockDatabase.users)[number] & { accountStatus?: string };
+
 export async function POST(request: NextRequest) {
   try {
     const authed = requireAuthenticatedUser(request);
     if (!authed.ok) return authed.response;
 
-    const body = await request.json();
-    const withUserId = typeof body?.withUserId === "string" ? body.withUserId.trim() : "";
-    const reason = typeof body?.reason === "string" ? body.reason.trim() : "";
-    const messageId = typeof body?.messageId === "string" ? body.messageId.trim() : undefined;
-    const evidence = body?.evidence as any;
+    const body = (await request.json()) as Record<string, unknown>;
+    const withUserId = typeof body.withUserId === "string" ? body.withUserId.trim() : "";
+    const reason = typeof body.reason === "string" ? body.reason.trim() : "";
+    const messageId = typeof body.messageId === "string" ? body.messageId.trim() : undefined;
+    const evidence = body.evidence;
 
     if (!withUserId) return errorResponse("withUserId is required", 400);
     if (withUserId === authed.decoded.userId) return errorResponse("Invalid withUserId", 400);
     if (!reason) return errorResponse("reason is required", 400);
 
     const other = mockDatabase.users.find((u) => u.id === withUserId);
-    if (!other || (other as any).accountStatus === "deleted") return errorResponse("User not found", 404);
+    const otherStatus = (other as UserRow | undefined)?.accountStatus;
+    if (!other || otherStatus === "deleted") return errorResponse("User not found", 404);
 
     const room = getOrCreatePrivateRoom(authed.decoded.userId, withUserId);
 
-    const sanitizedEvidence = evidence
+    const evidenceObj = evidence && typeof evidence === "object" ? (evidence as Record<string, unknown>) : null;
+    const sanitizedEvidence = evidenceObj
       ? {
-          messageText: typeof evidence?.messageText === "string" ? evidence.messageText.slice(0, 2000) : undefined,
-          createdAt: typeof evidence?.createdAt === "string" ? evidence.createdAt.slice(0, 64) : undefined,
+          messageText: typeof evidenceObj.messageText === "string" ? evidenceObj.messageText.slice(0, 2000) : undefined,
+          createdAt: typeof evidenceObj.createdAt === "string" ? evidenceObj.createdAt.slice(0, 64) : undefined,
         }
       : undefined;
 

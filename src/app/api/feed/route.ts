@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     // Get all feed posts (most recent first)
     const feed = [...mockDatabase.feedPosts].reverse();
     return successResponse(feed);
-  } catch (error) {
+  } catch {
     return errorResponse("Internal server error", 500);
   }
 }
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     }
 
     return errorResponse("Invalid action", 400);
-  } catch (error) {
+  } catch {
     return errorResponse("Internal server error", 500);
   }
 }

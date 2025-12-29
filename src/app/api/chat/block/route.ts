@@ -5,6 +5,8 @@ import { mockDatabase } from "@/lib/db/config";
 import { errorResponse, successResponse } from "@/lib/api/response";
 import { isBlockedByMe, setUserBlock } from "@/lib/chat/persistence";
 
+type UserRow = (typeof mockDatabase.users)[number] & { accountStatus?: string };
+
 function getWithUserId(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   return (searchParams.get("withUserId") || "").trim();
@@ -19,7 +21,8 @@ export async function GET(request: NextRequest) {
     if (!withUserId) return errorResponse("withUserId is required", 400);
 
     const other = mockDatabase.users.find((u) => u.id === withUserId);
-    if (!other || (other as any).accountStatus === "deleted") return errorResponse("User not found", 404);
+    const otherStatus = (other as UserRow | undefined)?.accountStatus;
+    if (!other || otherStatus === "deleted") return errorResponse("User not found", 404);
 
     const blocked = isBlockedByMe(authed.decoded.userId, withUserId);
     return successResponse({ withUserId, blocked });
@@ -40,7 +43,8 @@ export async function PUT(request: NextRequest) {
     if (withUserId === authed.decoded.userId) return errorResponse("Invalid withUserId", 400);
 
     const other = mockDatabase.users.find((u) => u.id === withUserId);
-    if (!other || (other as any).accountStatus === "deleted") return errorResponse("User not found", 404);
+    const otherStatus = (other as UserRow | undefined)?.accountStatus;
+    if (!other || otherStatus === "deleted") return errorResponse("User not found", 404);
 
     const res = setUserBlock(authed.decoded.userId, withUserId, blocked);
     if (!res.ok) return errorResponse(res.error, 400);

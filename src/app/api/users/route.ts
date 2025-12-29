@@ -2,7 +2,9 @@ import { NextRequest } from "next/server";
 import { mockDatabase } from "@/lib/db/config";
 import { hashPassword } from "@/lib/auth/utils";
 import { requireAuthenticatedUser } from "@/lib/auth/require";
-import { successResponse, errorResponse, authErrorResponse, notFoundResponse } from "@/lib/api/response";
+import { successResponse, errorResponse, notFoundResponse } from "@/lib/api/response";
+
+type UserRow = (typeof mockDatabase.users)[number] & { isVerified?: boolean };
 
 export async function GET(request: NextRequest) {
   try {
@@ -34,7 +36,7 @@ export async function GET(request: NextRequest) {
         citizenship: user.citizenship,
         role: user.role,
         badge: user.badge,
-        isVerified: Boolean((user as any).isVerified),
+        isVerified: Boolean((user as UserRow).isVerified),
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       },
@@ -46,7 +48,7 @@ export async function GET(request: NextRequest) {
         propertyCount: landProperties.length,
       },
     });
-  } catch (error) {
+  } catch {
     return errorResponse("Internal server error", 500);
   }
 }
@@ -88,7 +90,7 @@ export async function POST(request: NextRequest) {
       documents,
       landProperties,
     });
-  } catch (error) {
+  } catch {
     return errorResponse("Internal server error", 500);
   }
 }
@@ -149,14 +151,14 @@ export async function PUT(request: NextRequest) {
           citizenship: user.citizenship,
           role: user.role,
           badge: user.badge,
-          isVerified: Boolean((user as any).isVerified),
+          isVerified: Boolean((user as UserRow).isVerified),
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
         },
       },
       "Profile updated successfully"
     );
-  } catch (error) {
+  } catch {
     return errorResponse("Internal server error", 500);
   }
 }

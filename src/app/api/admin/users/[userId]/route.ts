@@ -26,7 +26,8 @@ export async function GET(request: NextRequest, context: { params: Promise<{ use
     const id = decodeURIComponent(userId);
 
     const u = mockDatabase.users.find((x) => x.id === id);
-    if (!u || (u as any).accountStatus === "deleted") return errorResponse("User not found", 404);
+    const accountStatus = (u as { accountStatus?: unknown } | undefined)?.accountStatus;
+    if (!u || accountStatus === "deleted") return errorResponse("User not found", 404);
 
     return successResponse(
       {
@@ -39,8 +40,8 @@ export async function GET(request: NextRequest, context: { params: Promise<{ use
           role: u.role || "user",
           badge: (u.badge || "citizen") as UserBadge,
           badgeLabel: getBadgeLabel((u.badge || "citizen") as UserBadge),
-          accountStatus: (u as any).accountStatus || "active",
-          isVerified: Boolean((u as any).isVerified),
+          accountStatus: (accountStatus as string | undefined) || "active",
+          isVerified: Boolean((u as { isVerified?: unknown }).isVerified),
           createdAt: u.createdAt,
           updatedAt: u.updatedAt,
         },

@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     }
 
     return successResponse(items);
-  } catch (error) {
+  } catch {
     return errorResponse("Internal server error", 500);
   }
 }
@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
       "Purchase completed successfully",
       201
     );
-  } catch (error) {
+  } catch {
     return errorResponse("Internal server error", 500);
   }
 }

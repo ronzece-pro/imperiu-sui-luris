@@ -4,13 +4,15 @@ import { requireAuthenticatedUser } from "@/lib/auth/require";
 import { mockDatabase } from "@/lib/db/config";
 import { errorResponse, successResponse } from "@/lib/api/response";
 
+type MockUser = (typeof mockDatabase.users)[number];
+
 export async function GET(request: NextRequest) {
   try {
     const authed = requireAuthenticatedUser(request);
     if (!authed.ok) return authed.response;
 
     const users = mockDatabase.users
-      .filter((u) => (u as any).accountStatus !== "deleted")
+      .filter((u) => (u as MockUser).accountStatus !== "deleted")
       .map((u) => ({
         id: u.id,
         name: u.fullName || u.username || u.email,
@@ -18,7 +20,7 @@ export async function GET(request: NextRequest) {
         username: u.username,
         badge: u.badge || "citizen",
         role: u.role || "user",
-        isVerified: Boolean((u as any).isVerified),
+        isVerified: Boolean((u as MockUser).isVerified),
       }));
 
     return successResponse(users);

@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
         type: "wallet_topup_stripe_completed",
         actorUserId: userId,
         message: "Topup wallet (direct)",
-        metadata: { amount, paymentMethod: paymentMethod || "direct", txId: (result as any)?.tx?.id },
+        metadata: { amount, paymentMethod: paymentMethod || "direct", txId: result.tx.id },
       });
       return successResponse(
         {
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
           type: "wallet_deduct",
           actorUserId: userId,
           message: "Debitare wallet",
-          metadata: { amount, txId: (result as any)?.tx?.id, description: description || "Wallet purchase" },
+          metadata: { amount, txId: result.tx.id, description: description || "Wallet purchase" },
         });
         return successResponse(
           {

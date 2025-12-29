@@ -12,6 +12,12 @@ type AboutContent = {
   updatedAt?: string;
 };
 
+type ApiResponse<T> = {
+  success?: boolean;
+  data?: T;
+  error?: string;
+};
+
 function splitLines(raw: string): string[] {
   return raw
     .split("\n")
@@ -60,13 +66,13 @@ export default function AdminAboutPageSettings() {
         headers: { Authorization: `Bearer ${token}` },
         cache: "no-store",
       });
-      const json = (await res.json().catch(() => null)) as any;
+      const json = (await res.json().catch(() => null)) as ApiResponse<{ about?: AboutContent }> | null;
       if (!res.ok || !json?.success) {
         setMessage(json?.error || "Eroare la încărcare");
         return;
       }
 
-      const about = (json.data?.about || null) as AboutContent | null;
+      const about = json.data?.about || null;
       if (!about) {
         setMessage("Conținut inexistent");
         return;
@@ -104,7 +110,7 @@ export default function AdminAboutPageSettings() {
         body: JSON.stringify(payload),
       });
 
-      const json = (await res.json().catch(() => null)) as any;
+      const json = (await res.json().catch(() => null)) as ApiResponse<{ about?: AboutContent }> | null;
       if (!res.ok || !json?.success) {
         setMessage(json?.error || "Eroare la salvare");
         return;

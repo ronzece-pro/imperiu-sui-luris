@@ -80,7 +80,7 @@ export default function ChatPage() {
   const [room, setRoom] = useState<ChatRoom | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [, setRefreshing] = useState(false);
   const [error, setError] = useState<string>("");
 
   const [privateBlocked, setPrivateBlocked] = useState(false);
@@ -254,7 +254,6 @@ export default function ChatPage() {
     if (!token) return;
 
     let cancelled = false;
-    let timer: any;
 
     const load = async () => {
       try {
@@ -272,10 +271,10 @@ export default function ChatPage() {
     };
 
     void load();
-    timer = setInterval(load, 4000);
+    const intervalId = setInterval(load, 4000);
     return () => {
       cancelled = true;
-      if (timer) clearInterval(timer);
+      clearInterval(intervalId);
     };
   }, [token]);
 
@@ -283,7 +282,6 @@ export default function ChatPage() {
     if (!token) return;
 
     let cancelled = false;
-    let timer: any;
 
     let inFlight = false;
 
@@ -334,15 +332,11 @@ export default function ChatPage() {
       }
     };
 
-    const poll = async () => {
-      await load(false);
-      timer = setInterval(() => void load(true), 2500);
-    };
-
-    void poll();
+    void load(false);
+    const intervalId = setInterval(() => void load(true), 2500);
     return () => {
       cancelled = true;
-      if (timer) clearInterval(timer);
+      clearInterval(intervalId);
     };
   }, [selectedUserId, token]);
 

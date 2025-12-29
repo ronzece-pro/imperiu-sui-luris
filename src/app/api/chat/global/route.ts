@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { requireAuthenticatedUser } from "@/lib/auth/require";
 import { mockDatabase } from "@/lib/db/config";
 import { errorResponse, successResponse } from "@/lib/api/response";
+import type { ChatMessage } from "@/types";
 import {
   cleanupChatMessages,
   createMessage,
@@ -12,12 +13,14 @@ import {
   validateAndNormalizeMessageInput,
 } from "@/lib/chat/persistence";
 
+type MockUser = (typeof mockDatabase.users)[number];
+
 function requireVerifiedUser(userId: string) {
   const user = mockDatabase.users.find((u) => u.id === userId);
-  return Boolean((user as any)?.isVerified);
+  return Boolean((user as MockUser | undefined)?.isVerified);
 }
 
-function enrichMessages(messages: any[]) {
+function enrichMessages(messages: ChatMessage[]) {
   const byId = new Map(mockDatabase.users.map((u) => [u.id, u] as const));
   return messages.map((m) => {
     const sender = byId.get(m.senderId);
@@ -27,7 +30,7 @@ function enrichMessages(messages: any[]) {
         ? {
             id: sender.id,
             name: sender.fullName || sender.username || sender.email,
-            isVerified: Boolean((sender as any).isVerified),
+            isVerified: Boolean((sender as MockUser).isVerified),
             badge: sender.badge || "citizen",
           }
         : { id: m.senderId, name: "Unknown", isVerified: false, badge: "citizen" },

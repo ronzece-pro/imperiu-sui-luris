@@ -23,6 +23,13 @@ interface AdminStats {
   totalPosts: number;
 }
 
+type AdminNavItem = {
+  id: string;
+  label: string;
+  icon: string;
+  badge?: number;
+};
+
 export default function AdminDashboard() {
   const router = useRouter();
   const [isOwner, setIsOwner] = useState(false);
@@ -37,6 +44,22 @@ export default function AdminDashboard() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState<string>("");
+
+  const navItems: AdminNavItem[] = [
+    { id: "dashboard", label: "Dashboard", icon: "📊" },
+    { id: "users", label: "Utilizatori", icon: "👥" },
+    { id: "posts", label: "Postări", icon: "📝" },
+    { id: "chat", label: "Moderare Chat", icon: "🛡️" },
+    { id: "reports", label: "Rapoarte", icon: "🚨", badge: reportCount },
+    { id: "verifications", label: "Verificări", icon: "✅", badge: pendingVerifications },
+    { id: "audit", label: "Audit", icon: "🧾" },
+    { id: "payments", label: "Plăți", icon: "💳" },
+    { id: "email", label: "Email", icon: "✉️" },
+    { id: "luris", label: "Luris Points", icon: "💎" },
+    { id: "about", label: "Despre", icon: "ℹ️" },
+    { id: "legal", label: "Pagini Legale", icon: "⚖️" },
+    { id: "settings", label: "Setări", icon: "⚙️" },
+  ];
 
   useEffect(() => {
     // Check if user is owner
@@ -192,21 +215,7 @@ export default function AdminDashboard() {
         {/* Sidebar Navigation */}
         <div className="bg-gray-900 border-b md:border-b-0 md:border-r border-gray-800 md:w-64 flex-shrink-0 p-4 sm:p-6">
           <nav className="space-y-2">
-            {[
-              { id: "dashboard", label: "Dashboard", icon: "📊" },
-              { id: "users", label: "Utilizatori", icon: "👥" },
-              { id: "posts", label: "Postări", icon: "📝" },
-              { id: "chat", label: "Chat", icon: "💬" },
-              { id: "reports", label: "Rapoarte", icon: "🚨", badge: reportCount },
-              { id: "verifications", label: "Verificări", icon: "✅", badge: pendingVerifications },
-              { id: "audit", label: "Audit", icon: "🧾" },
-              { id: "payments", label: "Plăți", icon: "💳" },
-              { id: "email", label: "Email", icon: "✉️" },
-              { id: "luris", label: "Luris Points", icon: "💎" },
-              { id: "about", label: "Despre", icon: "ℹ️" },
-              { id: "legal", label: "Pagini Legale", icon: "⚖️" },
-              { id: "settings", label: "Setări", icon: "⚙️" },
-            ].map((item) => (
+            {navItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => {
@@ -225,9 +234,9 @@ export default function AdminDashboard() {
                 <span className="mr-3">{item.icon}</span>
                 <span className="inline-flex items-center justify-between w-[calc(100%-24px)]">
                   <span>{item.label}</span>
-                  {typeof (item as any).badge === "number" && (item as any).badge > 0 ? (
+                  {typeof item.badge === "number" && item.badge > 0 ? (
                     <span className="ml-2 text-[10px] leading-none px-2 py-1 rounded-full bg-red-600 text-white">
-                      {(item as any).badge}
+                      {item.badge}
                     </span>
                   ) : null}
                 </span>

@@ -5,6 +5,8 @@ type SendEmailInput = {
   html?: string;
 };
 
+import { adminDatabase } from "@/lib/admin/config";
+
 export async function sendEmail(input: SendEmailInput): Promise<{ ok: true } | { ok: false; error: string }> {
   const { apiKey, from } = getEmailConfig();
 
@@ -48,13 +50,10 @@ function getEmailConfig(): { apiKey: string; from: string } {
 
   try {
     // Fallback to in-app admin settings (runtime only; not persisted across restarts).
-    // Import lazily to avoid unnecessary coupling when email isn't used.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { adminDatabase } = require("@/lib/admin/config") as typeof import("@/lib/admin/config");
-    const settings = (adminDatabase as any).emailSettings;
-    const key = typeof settings?.resendApiKey === "string" ? settings.resendApiKey : "";
-    const from = typeof settings?.emailFrom === "string" ? settings.emailFrom : "";
-    const enabled = Boolean(settings?.enabled);
+    const settings = adminDatabase.emailSettings;
+    const key = typeof settings.resendApiKey === "string" ? settings.resendApiKey : "";
+    const from = typeof settings.emailFrom === "string" ? settings.emailFrom : "";
+    const enabled = Boolean(settings.enabled);
     if (enabled && key && from) return { apiKey: key, from };
   } catch {
     // ignore

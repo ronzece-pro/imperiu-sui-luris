@@ -1,6 +1,8 @@
 import type { VerificationDocKind, VerificationRequest, VerificationStatus, VerificationUpload } from "@/types";
 import { mockDatabase } from "@/lib/db/config";
 
+type UserRow = (typeof mockDatabase.users)[number] & { isVerified?: boolean };
+
 export function getLatestVerificationRequestForUser(userId: string): VerificationRequest | null {
   const list = mockDatabase.verificationRequests.filter((r) => r.userId === userId);
   if (list.length === 0) return null;
@@ -64,7 +66,7 @@ export function decideVerificationRequest(input: {
   if (input.status === "approved") {
     const user = mockDatabase.users.find((u) => u.id === req.userId);
     if (user) {
-      (user as any).isVerified = true;
+      (user as UserRow).isVerified = true;
       user.updatedAt = now;
     }
   }

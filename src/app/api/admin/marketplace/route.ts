@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { mockDatabase } from "@/lib/db/config";
 import { requireAuthenticatedUser } from "@/lib/auth/require";
-import { authErrorResponse, errorResponse, successResponse } from "@/lib/api/response";
+import { errorResponse, successResponse } from "@/lib/api/response";
 
 function requireAdmin(request: NextRequest) {
   const authed = requireAuthenticatedUser(request);

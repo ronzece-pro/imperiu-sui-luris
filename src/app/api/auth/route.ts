@@ -18,6 +18,12 @@ import { authLockoutTemplate } from "@/lib/email/templates";
 import { appendAuditLog } from "@/lib/audit/persistence";
 import { lookupGeoIp } from "@/lib/geoip/lookup";
 
+type UserRow = (typeof mockDatabase.users)[number] & {
+  accountStatus?: string;
+  passwordHash?: string;
+  isVerified?: boolean;
+};
+
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as {
@@ -170,11 +176,13 @@ export async function POST(request: NextRequest) {
         return errorResponse("Invalid email or password", 401);
       }
 
-      if ((user as any).accountStatus === "deleted") return errorResponse("Account deleted", 403);
-      if ((user as any).accountStatus === "banned") return errorResponse("Account banned", 403);
-      if ((user as any).accountStatus === "blocked") return errorResponse("Account blocked", 403);
+      const userRow = user as UserRow;
 
-      const isValid = verifyPassword(passwordStr, (user as any).passwordHash || "");
+      if (userRow.accountStatus === "deleted") return errorResponse("Account deleted", 403);
+      if (userRow.accountStatus === "banned") return errorResponse("Account banned", 403);
+      if (userRow.accountStatus === "blocked") return errorResponse("Account blocked", 403);
+
+      const isValid = verifyPassword(passwordStr, userRow.passwordHash || "");
       if (!isValid) {
         const failure = recordAuthFailure(attemptKey);
         if (failure.lockedNow && shouldSendLockoutEmail(attemptKey)) {
@@ -220,7 +228,7 @@ export async function POST(request: NextRequest) {
             createdAt: user.createdAt,
             role: user.role || "user",
             badge: user.badge || "citizen",
-            isVerified: Boolean((user as any).isVerified),
+            isVerified: Boolean(userRow.isVerified),
           },
           token,
         },
@@ -229,12 +237,12 @@ export async function POST(request: NextRequest) {
     }
 
     return errorResponse("Invalid action", 400);
-  } catch (error) {
+  } catch {
     return errorResponse("Internal server error", 500);
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   return NextResponse.json({
     success: false,
     message: "Use POST method for authentication",

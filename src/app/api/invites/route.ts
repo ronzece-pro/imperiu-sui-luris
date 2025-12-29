@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
   try {
     const invite = getOrCreateActiveInviteForUser(authed.decoded.userId);
     return successResponse({ activeInviteCode: invite.code }, "Invite generated");
-  } catch (e) {
+  } catch {
     return errorResponse("Nu pot genera codul de invitație", 500);
   }
 }

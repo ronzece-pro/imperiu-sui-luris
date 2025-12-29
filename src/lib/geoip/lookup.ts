@@ -75,29 +75,31 @@ export async function lookupGeoIp(ip: string, timeoutMs = 900): Promise<GeoIpLoo
       return null;
     }
 
-    const json = (await res.json()) as any;
+    const json = (await res.json()) as unknown;
     if (!json || typeof json !== "object") {
       setCached(normalized, null);
       return null;
     }
 
-    if (typeof json.error === "boolean" && json.error) {
+    const data = json as Record<string, unknown>;
+
+    if (typeof data.error === "boolean" && data.error) {
       setCached(normalized, null);
       return null;
     }
 
-    const latitude = typeof json.latitude === "number" ? json.latitude : Number(json.latitude);
-    const longitude = typeof json.longitude === "number" ? json.longitude : Number(json.longitude);
+    const latitude = typeof data.latitude === "number" ? data.latitude : Number(data.latitude);
+    const longitude = typeof data.longitude === "number" ? data.longitude : Number(data.longitude);
 
     const value: GeoIpLookupResult = {
       ip: normalized,
-      city: typeof json.city === "string" ? json.city : undefined,
-      region: typeof json.region === "string" ? json.region : undefined,
-      country: typeof json.country_name === "string" ? json.country_name : undefined,
-      countryCode: typeof json.country_code === "string" ? json.country_code : undefined,
-      postal: typeof json.postal === "string" ? json.postal : undefined,
-      timezone: typeof json.timezone === "string" ? json.timezone : undefined,
-      org: typeof json.org === "string" ? json.org : undefined,
+      city: typeof data.city === "string" ? data.city : undefined,
+      region: typeof data.region === "string" ? data.region : undefined,
+      country: typeof data.country_name === "string" ? data.country_name : undefined,
+      countryCode: typeof data.country_code === "string" ? data.country_code : undefined,
+      postal: typeof data.postal === "string" ? data.postal : undefined,
+      timezone: typeof data.timezone === "string" ? data.timezone : undefined,
+      org: typeof data.org === "string" ? data.org : undefined,
       latitude: Number.isFinite(latitude) ? latitude : undefined,
       longitude: Number.isFinite(longitude) ? longitude : undefined,
       source: "ipapi.co",

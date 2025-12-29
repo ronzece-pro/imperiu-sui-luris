@@ -6,7 +6,7 @@ const DEFAULT_RETENTION_DAYS = 15;
 const DEFAULT_MAX_ENTRIES = 5000;
 
 function getRetentionDays(): number {
-  const adminValue = (adminDatabase as any)?.auditSettings?.retentionDays;
+  const adminValue = adminDatabase.auditSettings?.retentionDays;
   if (typeof adminValue === "number" && Number.isFinite(adminValue)) {
     return Math.max(1, Math.min(365, Math.floor(adminValue)));
   }
@@ -17,7 +17,7 @@ function getRetentionDays(): number {
 }
 
 function getMaxEntries(): number {
-  const adminValue = (adminDatabase as any)?.auditSettings?.maxEntries;
+  const adminValue = adminDatabase.auditSettings?.maxEntries;
   if (typeof adminValue === "number" && Number.isFinite(adminValue)) {
     return Math.max(100, Math.min(100_000, Math.floor(adminValue)));
   }

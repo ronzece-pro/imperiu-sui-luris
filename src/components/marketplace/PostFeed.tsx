@@ -57,9 +57,6 @@ export default function PostFeed({ posts }: Props) {
       setIsProcessing(false);
     }
   };
-
-  const isPurchased = selectedPost ? purchasedPosts.includes(selectedPost.id) : false;
-
   return (
     <div className="space-y-6">
       {posts.map((post) => (
