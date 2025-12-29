@@ -65,14 +65,25 @@ export default function AdminDashboard() {
   const fetchAdminStats = async () => {
     try {
       setIsLoading(true);
-      // In production, fetch from API
-      const mockStats: AdminStats = {
-        totalUsers: 1234,
-        totalBalance: 45680.5,
-        totalTransactions: 8923,
-        totalPosts: 456,
-      };
-      setStats(mockStats);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setStats({ totalUsers: 0, totalBalance: 0, totalTransactions: 0, totalPosts: 0 });
+        return;
+      }
+
+      const response = await fetch("/api/admin/stats", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (!data?.success) {
+        setStats({ totalUsers: 0, totalBalance: 0, totalTransactions: 0, totalPosts: 0 });
+        return;
+      }
+
+      setStats(data.data as AdminStats);
     } catch (error) {
       console.error("Error fetching stats:", error);
     } finally {

@@ -11,7 +11,7 @@ function requireAdmin(request: NextRequest) {
   if (!decoded) return { ok: false as const, response: authErrorResponse() };
 
   const user = mockDatabase.users.find((u) => u.id === decoded.userId);
-  if (user?.id !== "user_admin") {
+  if (user?.role !== "admin" && user?.id !== "user_admin") {
     return { ok: false as const, response: errorResponse("Only administrators can manage marketplace items", 403) };
   }
 

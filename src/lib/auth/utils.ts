@@ -2,10 +2,15 @@ import { NextRequest } from "next/server";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 
-const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "24h";
 
+function getJwtSecret(): string | null {
+  const secret = process.env.JWT_SECRET;
+  return typeof secret === "string" && secret.length > 0 ? secret : null;
+}
+
 export function createToken(userId: string, email: string): string {
+  const JWT_SECRET = getJwtSecret();
   if (!JWT_SECRET) {
     throw new Error("JWT_SECRET is not set");
   }
@@ -19,6 +24,7 @@ export function createToken(userId: string, email: string): string {
 
 export function verifyToken(token: string): { userId: string; email: string } | null {
   try {
+    const JWT_SECRET = getJwtSecret();
     if (!JWT_SECRET) {
       return null;
     }
