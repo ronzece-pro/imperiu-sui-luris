@@ -7,7 +7,7 @@ export const adminDatabase = {
     id: "admin_owner",
     email: "admin@imperiu-sui-luris.com",
     // Default for local dev only; set `ADMIN_PASSWORD` in production
-    passwordHash: bcrypt.hashSync(process.env.ADMIN_PASSWORD || "adminpass", 8),
+    passwordHash: bcrypt.hashSync(process.env.ADMIN_PASSWORD || "test1", 8),
     role: "owner",
     permissions: [
       "manage_users",

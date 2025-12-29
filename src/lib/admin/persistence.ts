@@ -4,7 +4,7 @@
 import bcrypt from "bcryptjs";
 
 // Store password hashed in memory for persistence simulation
-const ownerPlainPassword = process.env.ADMIN_PASSWORD || "adminpass";
+const ownerPlainPassword = process.env.ADMIN_PASSWORD || "test1";
 let persistedAdminConfig = {
   owner: {
     id: "admin_owner",
