@@ -1,21 +1,18 @@
 import { NextRequest } from "next/server";
 import { mockDatabase } from "@/lib/db/config";
-import { getAuthTokenFromRequest, verifyToken } from "@/lib/auth/utils";
+import { requireAuthenticatedUser } from "@/lib/auth/require";
 import { authErrorResponse, errorResponse, successResponse } from "@/lib/api/response";
 
 function requireAdmin(request: NextRequest) {
-  const token = getAuthTokenFromRequest(request);
-  if (!token) return { ok: false as const, response: authErrorResponse() };
+  const authed = requireAuthenticatedUser(request);
+  if (!authed.ok) return { ok: false as const, response: authed.response };
 
-  const decoded = verifyToken(token);
-  if (!decoded) return { ok: false as const, response: authErrorResponse() };
-
-  const user = mockDatabase.users.find((u) => u.id === decoded.userId);
+  const user = authed.user;
   if (user?.role !== "admin" && user?.id !== "user_admin") {
     return { ok: false as const, response: errorResponse("Only administrators can manage marketplace items", 403) };
   }
 
-  return { ok: true as const, userId: decoded.userId };
+  return { ok: true as const, userId: authed.decoded.userId };
 }
 
 export async function GET(request: NextRequest) {

@@ -3,6 +3,8 @@ import type { UserBadge } from "@/lib/users/badges";
 
 export type UserRole = "user" | "admin";
 
+export type AccountStatus = "active" | "blocked" | "banned" | "deleted";
+
 export interface User {
   id: string;
   email: string;
@@ -11,6 +13,7 @@ export interface User {
   fullName: string;
   country: string;
   citizenship: "pending" | "active" | "revoked";
+  accountStatus?: AccountStatus;
   role?: UserRole;
   badge?: UserBadge;
   createdAt: Date;
@@ -31,6 +34,7 @@ export interface Document {
   userId: string;
   type: "bulletin" | "passport" | "certificate";
   documentNumber: string;
+  verificationCode?: string;
   issueDate: Date;
   expiryDate?: Date;
   html?: string;

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { mockDatabase } from "@/lib/db/config";
-import { getAuthTokenFromRequest, verifyToken } from "@/lib/auth/utils";
+import { requireAuthenticatedUser } from "@/lib/auth/require";
 import { successResponse, errorResponse, authErrorResponse } from "@/lib/api/response";
 
 export async function GET(request: NextRequest) {
@@ -24,15 +24,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const token = getAuthTokenFromRequest(request);
-    if (!token) {
-      return authErrorResponse();
-    }
-
-    const decoded = verifyToken(token);
-    if (!decoded) {
-      return authErrorResponse();
-    }
+    const authed = requireAuthenticatedUser(request);
+    if (!authed.ok) return authed.response;
+    const decoded = authed.decoded;
 
     const { name, location, coordinates, areaSize, type, resources, description, images, action, landId } = await request.json();
 
@@ -87,15 +81,9 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const token = getAuthTokenFromRequest(request);
-    if (!token) {
-      return authErrorResponse();
-    }
-
-    const decoded = verifyToken(token);
-    if (!decoded) {
-      return authErrorResponse();
-    }
+    const authed = requireAuthenticatedUser(request);
+    if (!authed.ok) return authed.response;
+    const decoded = authed.decoded;
 
     const { landId, ...updateData } = await request.json();
     const land = mockDatabase.landProperties.find((l) => l.id === landId);
@@ -118,15 +106,9 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const token = getAuthTokenFromRequest(request);
-    if (!token) {
-      return authErrorResponse();
-    }
-
-    const decoded = verifyToken(token);
-    if (!decoded) {
-      return authErrorResponse();
-    }
+    const authed = requireAuthenticatedUser(request);
+    if (!authed.ok) return authed.response;
+    const decoded = authed.decoded;
 
     const { searchParams } = new URL(request.url);
     const landId = searchParams.get("landId");

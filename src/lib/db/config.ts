@@ -3,7 +3,7 @@
 // For development, we'll use a mock database structure
 
 import bcrypt from "bcryptjs";
-import type { MarketplaceItem } from "@/types";
+import type { Document, MarketplaceItem } from "@/types";
 
 export const DATABASE_URL = process.env.DATABASE_URL || "postgresql://user:password@localhost:5432/imperiu_sui_luris";
 
@@ -18,6 +18,7 @@ export const mockDatabase = {
       country: "Romania",
       role: "user",
       badge: "citizen",
+      accountStatus: "active",
       // default dev password: 'password123' (hashed)
       passwordHash: bcrypt.hashSync("password123", 8),
       citizenship: "active",
@@ -35,6 +36,7 @@ export const mockDatabase = {
       country: "Romania",
       role: "user",
       badge: "citizen",
+      accountStatus: "active",
       passwordHash: bcrypt.hashSync("password123", 8),
       citizenship: "active",
       totalLandArea: 0,
@@ -51,6 +53,7 @@ export const mockDatabase = {
       country: "Romania",
       role: "user",
       badge: "citizen",
+      accountStatus: "active",
       passwordHash: bcrypt.hashSync("password123", 8),
       citizenship: "pending",
       totalLandArea: 0,
@@ -67,6 +70,7 @@ export const mockDatabase = {
       country: "Romania",
       role: "user",
       badge: "citizen",
+      accountStatus: "active",
       passwordHash: bcrypt.hashSync("password123", 8),
       citizenship: "active",
       totalLandArea: 750,
@@ -84,6 +88,7 @@ export const mockDatabase = {
       citizenship: "active",
       role: "admin",
       badge: "president",
+      accountStatus: "active",
       passwordHash: bcrypt.hashSync(process.env.ADMIN_PASSWORD || "test1", 8),
       createdAt: new Date("2023-01-01"),
       updatedAt: new Date(),
@@ -113,7 +118,7 @@ export const mockDatabase = {
       createdAt: new Date("2024-02-01"),
       updatedAt: new Date(),
     },
-  ],
+  ] as Document[],
   landProperties: [
     {
       id: "land_001",

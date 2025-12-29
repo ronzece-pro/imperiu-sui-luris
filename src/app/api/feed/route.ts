@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { mockDatabase } from "@/lib/db/config";
-import { getAuthTokenFromRequest, verifyToken } from "@/lib/auth/utils";
-import { successResponse, errorResponse, authErrorResponse } from "@/lib/api/response";
+import { requireAuthenticatedUser } from "@/lib/auth/require";
+import { successResponse, errorResponse } from "@/lib/api/response";
 
 export async function GET(request: NextRequest) {
   try {
@@ -27,15 +27,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const token = getAuthTokenFromRequest(request);
-    if (!token) {
-      return authErrorResponse();
-    }
-
-    const decoded = verifyToken(token);
-    if (!decoded) {
-      return authErrorResponse();
-    }
+    const authed = requireAuthenticatedUser(request);
+    if (!authed.ok) return authed.response;
+    const decoded = authed.decoded;
 
     const body = await request.json();
     const { content, images, action, postId, text } = body;

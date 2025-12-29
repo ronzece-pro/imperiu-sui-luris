@@ -3,7 +3,7 @@ import { successResponse, errorResponse } from "@/lib/api/response";
 import Stripe from "stripe";
 import { adminDatabase } from "@/lib/admin/config";
 import { addFundsToWallet, completeMetamaskTopup, createPendingStripeTopup, deductFundsFromWallet, getOrCreateWallet } from "@/lib/wallet/persistence";
-import { getAuthTokenFromRequest, verifyToken } from "@/lib/auth/utils";
+import { requireAuthenticatedUser } from "@/lib/auth/require";
 import { JsonRpcProvider, getAddress } from "ethers";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", { apiVersion: "2022-11-15" });
@@ -14,15 +14,9 @@ export async function POST(request: NextRequest) {
       return errorResponse("Wallet database is not configured", 500);
     }
 
-    const token = getAuthTokenFromRequest(request);
-    if (!token) {
-      return errorResponse("Unauthorized - Invalid or missing token", 401);
-    }
-
-    const decoded = verifyToken(token);
-    if (!decoded) {
-      return errorResponse("Unauthorized - Invalid or missing token", 401);
-    }
+    const authed = requireAuthenticatedUser(request);
+    if (!authed.ok) return authed.response;
+    const decoded = authed.decoded;
 
     const body = await request.json();
     const { action, amount, description, paymentMethod } = body;
@@ -142,15 +136,9 @@ export async function PUT(request: NextRequest) {
       return errorResponse("Wallet database is not configured", 500);
     }
 
-    const token = getAuthTokenFromRequest(request);
-    if (!token) {
-      return errorResponse("Unauthorized - Invalid or missing token", 401);
-    }
-
-    const decoded = verifyToken(token);
-    if (!decoded) {
-      return errorResponse("Unauthorized - Invalid or missing token", 401);
-    }
+    const authed = requireAuthenticatedUser(request);
+    if (!authed.ok) return authed.response;
+    const decoded = authed.decoded;
 
     const body = await request.json();
     const { action, lurisAmount, txHash } = body as {
@@ -248,15 +236,9 @@ export async function GET(request: NextRequest) {
       return errorResponse("Wallet database is not configured", 500);
     }
 
-    const token = getAuthTokenFromRequest(request);
-    if (!token) {
-      return errorResponse("Unauthorized - Invalid or missing token", 401);
-    }
-
-    const decoded = verifyToken(token);
-    if (!decoded) {
-      return errorResponse("Unauthorized - Invalid or missing token", 401);
-    }
+    const authed = requireAuthenticatedUser(request);
+    if (!authed.ok) return authed.response;
+    const decoded = authed.decoded;
 
     const userId = decoded.userId;
 

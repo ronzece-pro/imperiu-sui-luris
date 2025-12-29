@@ -171,6 +171,17 @@ export default function DashboardPage() {
                     <p className="text-cyan-300">
                       Status: <span className="text-white">{doc.status}</span>
                     </p>
+
+                    <div className="mt-4">
+                      <a
+                        href={`/documents/view/${encodeURIComponent(doc.id)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        Vezi act
+                      </a>
+                    </div>
                   </div>
                 ))}
               </div>

@@ -1,19 +1,14 @@
 import { NextRequest } from "next/server";
 import { mockDatabase } from "@/lib/db/config";
-import { getAuthTokenFromRequest, hashPassword, verifyToken } from "@/lib/auth/utils";
+import { hashPassword } from "@/lib/auth/utils";
+import { requireAuthenticatedUser } from "@/lib/auth/require";
 import { successResponse, errorResponse, authErrorResponse, notFoundResponse } from "@/lib/api/response";
 
 export async function GET(request: NextRequest) {
   try {
-    const token = getAuthTokenFromRequest(request);
-    if (!token) {
-      return authErrorResponse();
-    }
-
-    const decoded = verifyToken(token);
-    if (!decoded) {
-      return authErrorResponse();
-    }
+    const authed = requireAuthenticatedUser(request);
+    if (!authed.ok) return authed.response;
+    const decoded = authed.decoded;
 
     // Get user profile
     const user = mockDatabase.users.find((u) => u.id === decoded.userId);
@@ -58,15 +53,9 @@ export async function GET(request: NextRequest) {
 // Get specific user profile by ID
 export async function POST(request: NextRequest) {
   try {
-    const token = getAuthTokenFromRequest(request);
-    if (!token) {
-      return authErrorResponse();
-    }
-
-    const decoded = verifyToken(token);
-    if (!decoded) {
-      return authErrorResponse();
-    }
+    const authed = requireAuthenticatedUser(request);
+    if (!authed.ok) return authed.response;
+    const decoded = authed.decoded;
 
     const { userId } = await request.json();
 
@@ -106,15 +95,9 @@ export async function POST(request: NextRequest) {
 // Update current user profile
 export async function PUT(request: NextRequest) {
   try {
-    const token = getAuthTokenFromRequest(request);
-    if (!token) {
-      return authErrorResponse();
-    }
-
-    const decoded = verifyToken(token);
-    if (!decoded) {
-      return authErrorResponse();
-    }
+    const authed = requireAuthenticatedUser(request);
+    if (!authed.ok) return authed.response;
+    const decoded = authed.decoded;
 
     const body = await request.json();
     const { fullName, email, username, password } = body as {

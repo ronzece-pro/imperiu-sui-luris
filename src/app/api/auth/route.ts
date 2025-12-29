@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
         citizenship: "pending",
         role: "user",
         badge: "citizen",
+        accountStatus: "active",
         totalLandArea: 0,
         totalFunds: 0,
         documentCount: 0,
@@ -92,6 +93,16 @@ export async function POST(request: NextRequest) {
       const user = mockDatabase.users.find((u) => u.email.toLowerCase() === emailNormalized);
       if (!user) {
         return errorResponse("Invalid email or password", 401);
+      }
+
+      if (user.accountStatus === "deleted") {
+        return errorResponse("Account deleted", 403);
+      }
+      if (user.accountStatus === "banned") {
+        return errorResponse("Account banned", 403);
+      }
+      if (user.accountStatus === "blocked") {
+        return errorResponse("Account blocked", 403);
       }
 
       // Verify password

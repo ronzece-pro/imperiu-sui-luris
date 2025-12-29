@@ -1,5 +1,7 @@
 export type UserBadge =
   | "citizen"
+  | "doctor"
+  | "engineer"
   | "resident_citizen"
   | "passport_citizen"
   | "diplomat"
@@ -21,6 +23,8 @@ export type UserBadge =
 
 export const BADGES: Array<{ id: UserBadge; label: string }> = [
   { id: "citizen", label: "Cetățean" },
+  { id: "doctor", label: "Doctor" },
+  { id: "engineer", label: "Inginer" },
   { id: "resident_citizen", label: "Cetățean rezident" },
   { id: "passport_citizen", label: "Cetățean cu pașaport" },
   { id: "diplomat", label: "Diplomat" },
