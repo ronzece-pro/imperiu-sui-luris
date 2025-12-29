@@ -35,16 +35,26 @@ export default function VerificationPage() {
   const [current, setCurrent] = useState<VerificationRequestDto | null>(null);
 
   const [docKind, setDocKind] = useState<VerificationDocKind>("bulletin");
+  const [legalFullName, setLegalFullName] = useState("");
+  const [country, setCountry] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [city, setCity] = useState("");
+  const [address, setAddress] = useState("");
   const [documents, setDocuments] = useState<File[]>([]);
   const [selfie, setSelfie] = useState<File | null>(null);
 
   const canSubmit = useMemo(() => {
     if (!token) return false;
+    if (!legalFullName.trim()) return false;
+    if (!country.trim()) return false;
+    if (!birthDate.trim()) return false;
+    if (!city.trim()) return false;
+    if (!address.trim()) return false;
     if (!documents.length) return false;
     if (!selfie) return false;
     if (current?.status === "pending") return false;
     return true;
-  }, [token, documents.length, selfie, current?.status]);
+  }, [token, legalFullName, country, birthDate, city, address, documents.length, selfie, current?.status]);
 
   useEffect(() => {
     const t = localStorage.getItem("token") || "";
@@ -86,10 +96,20 @@ export default function VerificationPage() {
       return;
     }
 
+    if (!legalFullName.trim() || !country.trim() || !birthDate.trim() || !city.trim() || !address.trim()) {
+      setError("Completează toate câmpurile de identitate");
+      return;
+    }
+
     try {
       setSubmitting(true);
       const form = new FormData();
       form.set("docKind", docKind);
+      form.set("legalFullName", legalFullName);
+      form.set("country", country);
+      form.set("birthDate", birthDate);
+      form.set("city", city);
+      form.set("address", address);
       documents.slice(0, 3).forEach((f) => form.append("documents", f));
       form.set("selfie", selfie);
 
@@ -121,7 +141,7 @@ export default function VerificationPage() {
       <Navbar />
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="w-full max-w-3xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-8">
-          <div className="bg-white bg-opacity-5 backdrop-blur-lg border border-slate-700 rounded-2xl p-4 sm:p-6 md:p-8">
+          <div className="bg-slate-900/80 backdrop-blur-lg border border-slate-700 rounded-2xl p-4 sm:p-6 md:p-8">
             <div className="flex items-center justify-between gap-3">
               <h1 className="text-2xl sm:text-3xl font-bold text-white">Verificare cont</h1>
               <button
@@ -165,11 +185,61 @@ export default function VerificationPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <label className="text-sm text-gray-200">
+                    Nume complet (legal)
+                    <input
+                      value={legalFullName}
+                      onChange={(e) => setLegalFullName(e.target.value)}
+                      className="mt-2 w-full bg-slate-950/60 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-400"
+                      placeholder="Nume Prenume"
+                    />
+                  </label>
+
+                  <label className="text-sm text-gray-200">
+                    Țara
+                    <input
+                      value={country}
+                      onChange={(e) => setCountry(e.target.value)}
+                      className="mt-2 w-full bg-slate-950/60 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-400"
+                      placeholder="România"
+                    />
+                  </label>
+
+                  <label className="text-sm text-gray-200">
+                    Data nașterii
+                    <input
+                      type="date"
+                      value={birthDate}
+                      onChange={(e) => setBirthDate(e.target.value)}
+                      className="mt-2 w-full bg-slate-950/60 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-400"
+                    />
+                  </label>
+
+                  <label className="text-sm text-gray-200">
+                    Oraș
+                    <input
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      className="mt-2 w-full bg-slate-950/60 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-400"
+                      placeholder="București"
+                    />
+                  </label>
+
+                  <label className="text-sm text-gray-200 sm:col-span-2">
+                    Adresă
+                    <input
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      className="mt-2 w-full bg-slate-950/60 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-400"
+                      placeholder="Strada, număr, bloc, etc."
+                    />
+                  </label>
+
+                  <label className="text-sm text-gray-200">
                     Tip document
                     <select
                       value={docKind}
                       onChange={(e) => setDocKind(e.target.value as VerificationDocKind)}
-                      className="mt-2 w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+                      className="mt-2 w-full bg-slate-950/60 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-400"
                     >
                       <option value="bulletin">Buletin</option>
                       <option value="driver_license">Permis</option>
@@ -183,7 +253,7 @@ export default function VerificationPage() {
                       type="file"
                       accept="image/*"
                       onChange={(e) => setSelfie(e.target.files?.[0] || null)}
-                      className="mt-2 w-full text-sm text-gray-300"
+                      className="mt-2 w-full text-sm text-gray-200"
                     />
                   </label>
                 </div>
@@ -195,7 +265,7 @@ export default function VerificationPage() {
                     multiple
                     accept="image/*,application/pdf"
                     onChange={(e) => setDocuments(Array.from(e.target.files || []))}
-                    className="mt-2 w-full text-sm text-gray-300"
+                    className="mt-2 w-full text-sm text-gray-200"
                   />
                 </label>
 

@@ -1,17 +1,91 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
+type ClientNotification = {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  href?: string;
+  createdAt: string;
+  readAt?: string;
+};
+
 export default function Header() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userMenu, setUserMenu] = useState(false);
+  const [notifMenu, setNotifMenu] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [userName, setUserName] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [notifications, setNotifications] = useState<ClientNotification[]>([]);
+  const [notifUnread, setNotifUnread] = useState(0);
+  const [chatUnread, setChatUnread] = useState(0);
   const router = useRouter();
+
+  const fetchNotifications = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setNotifications([]);
+        setNotifUnread(0);
+        setChatUnread(0);
+        return;
+      }
+
+      const res = await fetch("/api/notifications?limit=20", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (!json?.success) return;
+
+      const data = json.data as {
+        notifications?: ClientNotification[];
+        unreadCount?: number;
+        chat?: { totalUnread?: number };
+      };
+
+      setNotifications(Array.isArray(data.notifications) ? data.notifications : []);
+      setNotifUnread(Number(data.unreadCount || 0));
+      setChatUnread(Number(data.chat?.totalUnread || 0));
+    } catch {
+      // ignore
+    }
+  };
+
+  const markNotifRead = async (notificationId: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      await fetch("/api/notifications", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ notificationId }),
+      });
+      await fetchNotifications();
+    } catch {
+      // ignore
+    }
+  };
+
+  const markAllNotifsRead = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      await fetch("/api/notifications", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ markAll: true }),
+      });
+      await fetchNotifications();
+    } catch {
+      // ignore
+    }
+  };
 
   useEffect(() => {
     const readAuthFromStorage = () => {
@@ -53,16 +127,14 @@ export default function Header() {
       }
     };
 
-    // Defer state update to avoid setState-in-effect lint rule
     const t = setTimeout(readAuthFromStorage, 0);
 
-    const onStorage = () => {
-      readAuthFromStorage();
-    };
+    const onStorage = () => readAuthFromStorage();
     window.addEventListener("storage", onStorage);
 
     const onAuthChanged = () => {
       readAuthFromStorage();
+      void fetchNotifications();
     };
     window.addEventListener("auth-changed", onAuthChanged as EventListener);
 
@@ -71,7 +143,16 @@ export default function Header() {
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("auth-changed", onAuthChanged as EventListener);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    void fetchNotifications();
+    const t = setInterval(() => void fetchNotifications(), 15000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -79,6 +160,7 @@ export default function Header() {
     window.dispatchEvent(new Event("auth-changed"));
     setIsLoggedIn(false);
     setUserMenu(false);
+    setNotifMenu(false);
     setMobileMenu(false);
     router.push("/");
   };
@@ -87,7 +169,6 @@ export default function Header() {
     <nav className="bg-black bg-opacity-40 backdrop-blur-lg border-b border-slate-700 sticky top-0 z-50">
       <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
         <div className="flex justify-between items-center h-14 sm:h-16">
-          {/* Logo */}
           <Link href="/" className="flex items-center space-x-2 group flex-shrink-0">
             <div className="relative w-7 h-7 sm:w-8 sm:h-8">
               <Image
@@ -102,7 +183,6 @@ export default function Header() {
             </span>
           </Link>
 
-          {/* Menu Items - Desktop */}
           <div className="hidden md:flex items-center space-x-4 lg:space-x-6">
             <Link href="/marketplace" className="text-gray-300 hover:text-white transition duration-200 text-sm">
               Piață
@@ -110,19 +190,18 @@ export default function Header() {
             <Link href="/about" className="text-gray-300 hover:text-white transition duration-200 text-sm">
               Despre
             </Link>
-            {isLoggedIn && (
-              <Link href="/dashboard" className="text-gray-300 hover:text-white transition duration-200 text-sm">
-                Dashboard
-              </Link>
-            )}
-            {isLoggedIn && (
-              <Link href="/chat" className="text-gray-300 hover:text-white transition duration-200 text-sm">
-                Chat
-              </Link>
-            )}
+            {isLoggedIn ? (
+              <>
+                <Link href="/dashboard" className="text-gray-300 hover:text-white transition duration-200 text-sm">
+                  Dashboard
+                </Link>
+                <Link href="/chat" className="text-gray-300 hover:text-white transition duration-200 text-sm">
+                  Chat
+                </Link>
+              </>
+            ) : null}
           </div>
 
-          {/* Auth Buttons - Desktop */}
           <div className="hidden md:flex items-center space-x-2 lg:space-x-3 flex-shrink-0">
             {!isLoggedIn ? (
               <>
@@ -140,56 +219,142 @@ export default function Header() {
                 </Link>
               </>
             ) : (
-              <div className="relative">
-                <button
-                  onClick={() => setUserMenu(!userMenu)}
-                  className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-bold text-sm transition group"
-                  title={userName || "Profil"}
-                >
-                  {(userName && userName.length > 0) ? userName.charAt(0).toUpperCase() : "U"}
-                </button>
-                {userMenu && (
-                  <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-lg py-2 z-50">
-                    <Link
-                      href="/dashboard"
-                      className="block px-4 py-2 text-sm text-gray-300 hover:bg-slate-700 hover:text-white"
-                    >
-                      📊 Dashboard
-                    </Link>
-                    <Link
-                      href="/profile"
-                      className="block px-4 py-2 text-sm text-gray-300 hover:bg-slate-700 hover:text-white"
-                    >
-                      👤 Profilul meu
-                    </Link>
-                    <Link
-                      href="/verification"
-                      className="block px-4 py-2 text-sm text-gray-300 hover:bg-slate-700 hover:text-white"
-                    >
-                      ✅ Verificare
-                    </Link>
-                    {isAdmin && (
+              <div className="relative flex items-center gap-2">
+                <div className="relative">
+                  <button
+                    onClick={() => {
+                      setNotifMenu(!notifMenu);
+                      setUserMenu(false);
+                      void fetchNotifications();
+                    }}
+                    className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-full transition"
+                    title="Notificări"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0a3 3 0 11-6 0m6 0H9"
+                      />
+                    </svg>
+                  </button>
+                  {notifUnread + chatUnread > 0 ? (
+                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[11px] leading-[18px] text-center">
+                      {Math.min(99, notifUnread + chatUnread)}
+                    </span>
+                  ) : null}
+
+                  {notifMenu ? (
+                    <div className="absolute right-0 mt-2 w-80 bg-slate-800 border border-slate-700 rounded-lg shadow-lg z-50 overflow-hidden">
+                      <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700">
+                        <div className="text-sm text-white font-medium">Notificări</div>
+                        <button
+                          onClick={() => void markAllNotifsRead()}
+                          className="text-xs text-gray-300 hover:text-white"
+                        >
+                          Marchează ca citite
+                        </button>
+                      </div>
+
+                      <div className="max-h-80 overflow-auto">
+                        {chatUnread > 0 ? (
+                          <Link
+                            href="/chat"
+                            onClick={() => setNotifMenu(false)}
+                            className="block px-3 py-2 hover:bg-slate-700"
+                          >
+                            <div className="text-sm text-white">Mesaje</div>
+                            <div className="text-xs text-gray-300">Ai {chatUnread} mesaje necitite</div>
+                          </Link>
+                        ) : null}
+
+                        {notifications.length === 0 ? (
+                          <div className="px-3 py-3 text-sm text-gray-300">Nicio notificare</div>
+                        ) : (
+                          notifications.map((n) => (
+                            <Link
+                              key={n.id}
+                              href={n.href || "#"}
+                              onClick={(e) => {
+                                if (!n.href) e.preventDefault();
+                                setNotifMenu(false);
+                                if (!n.readAt) void markNotifRead(n.id);
+                              }}
+                              className="block px-3 py-2 hover:bg-slate-700"
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <div className="text-sm text-white truncate">{n.title}</div>
+                                  <div className="text-xs text-gray-300 break-words overflow-hidden">{n.body}</div>
+                                  <div className="text-[11px] text-gray-400 mt-1">
+                                    {new Date(n.createdAt).toLocaleString("ro-RO")}
+                                  </div>
+                                </div>
+                                {!n.readAt ? (
+                                  <div className="w-2 h-2 rounded-full bg-blue-400 mt-1 flex-shrink-0" />
+                                ) : null}
+                              </div>
+                            </Link>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="relative">
+                  <button
+                    onClick={() => {
+                      setUserMenu(!userMenu);
+                      setNotifMenu(false);
+                    }}
+                    className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-bold text-sm transition group"
+                    title={userName || "Profil"}
+                  >
+                    {userName && userName.length > 0 ? userName.charAt(0).toUpperCase() : "U"}
+                  </button>
+                  {userMenu ? (
+                    <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-lg py-2 z-50">
                       <Link
-                        href="/admin"
+                        href="/dashboard"
                         className="block px-4 py-2 text-sm text-gray-300 hover:bg-slate-700 hover:text-white"
                       >
-                        🛡️ Admin
+                        📊 Dashboard
                       </Link>
-                    )}
-                    <hr className="my-2 border-slate-700" />
-                    <button
-                      onClick={handleLogout}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-slate-700 hover:text-white"
-                    >
-                      🚪 Ieșire
-                    </button>
-                  </div>
-                )}
+                      <Link
+                        href="/profile"
+                        className="block px-4 py-2 text-sm text-gray-300 hover:bg-slate-700 hover:text-white"
+                      >
+                        👤 Profilul meu
+                      </Link>
+                      <Link
+                        href="/verification"
+                        className="block px-4 py-2 text-sm text-gray-300 hover:bg-slate-700 hover:text-white"
+                      >
+                        ✅ Verificare
+                      </Link>
+                      {isAdmin ? (
+                        <Link
+                          href="/admin"
+                          className="block px-4 py-2 text-sm text-gray-300 hover:bg-slate-700 hover:text-white"
+                        >
+                          🛡️ Admin
+                        </Link>
+                      ) : null}
+                      <hr className="my-2 border-slate-700" />
+                      <button
+                        onClick={handleLogout}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-slate-700 hover:text-white"
+                      >
+                        🚪 Ieșire
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
               </div>
             )}
           </div>
 
-          {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenu(!mobileMenu)}
             className="md:hidden p-2 text-gray-300 hover:text-white"
@@ -204,8 +369,7 @@ export default function Header() {
           </button>
         </div>
 
-        {/* Mobile Menu */}
-        {mobileMenu && (
+        {mobileMenu ? (
           <div className="md:hidden border-t border-slate-700 py-3 space-y-3">
             <Link
               href="/marketplace"
@@ -221,24 +385,24 @@ export default function Header() {
             >
               Despre
             </Link>
-            {isLoggedIn && (
-              <Link
-                href="/dashboard"
-                className="block px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-slate-700/50 rounded"
-                onClick={() => setMobileMenu(false)}
-              >
-                Dashboard
-              </Link>
-            )}
-            {isLoggedIn && (
-              <Link
-                href="/chat"
-                className="block px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-slate-700/50 rounded"
-                onClick={() => setMobileMenu(false)}
-              >
-                Chat
-              </Link>
-            )}
+            {isLoggedIn ? (
+              <>
+                <Link
+                  href="/dashboard"
+                  className="block px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-slate-700/50 rounded"
+                  onClick={() => setMobileMenu(false)}
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  href="/chat"
+                  className="block px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-slate-700/50 rounded"
+                  onClick={() => setMobileMenu(false)}
+                >
+                  Chat
+                </Link>
+              </>
+            ) : null}
             <hr className="border-slate-700" />
             {!isLoggedIn ? (
               <div className="space-y-2 px-4">
@@ -283,7 +447,7 @@ export default function Header() {
                 >
                   ✅ Verificare
                 </Link>
-                {isAdmin && (
+                {isAdmin ? (
                   <Link
                     href="/admin"
                     className="block px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-slate-700/50 rounded text-center"
@@ -291,7 +455,7 @@ export default function Header() {
                   >
                     🛡️ Admin
                   </Link>
-                )}
+                ) : null}
                 <button
                   onClick={handleLogout}
                   className="w-full px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-red-700/50 rounded text-center"
@@ -301,7 +465,7 @@ export default function Header() {
               </div>
             )}
           </div>
-        )}
+        ) : null}
       </div>
     </nav>
   );

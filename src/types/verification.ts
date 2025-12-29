@@ -15,6 +15,11 @@ export interface VerificationRequest {
   id: string;
   userId: string;
   docKind: VerificationDocKind;
+  legalFullName: string;
+  country: string;
+  birthDate: string; // ISO date (YYYY-MM-DD)
+  city: string;
+  address: string;
   uploads: VerificationUpload[];
   status: VerificationStatus;
   adminNote?: string;

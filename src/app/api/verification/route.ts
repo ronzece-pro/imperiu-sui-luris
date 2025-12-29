@@ -53,6 +53,22 @@ export async function POST(request: NextRequest) {
     const docKindRaw = form.get("docKind");
     if (!isDocKind(docKindRaw)) return errorResponse("docKind invalid", 400);
 
+    const legalFullName = String(form.get("legalFullName") || "").trim();
+    const country = String(form.get("country") || "").trim();
+    const birthDate = String(form.get("birthDate") || "").trim();
+    const city = String(form.get("city") || "").trim();
+    const address = String(form.get("address") || "").trim();
+
+    if (!legalFullName) return errorResponse("Numele este obligatoriu", 400);
+    if (!country) return errorResponse("Țara este obligatorie", 400);
+    if (!birthDate) return errorResponse("Data nașterii este obligatorie", 400);
+    if (!city) return errorResponse("Orașul este obligatoriu", 400);
+    if (!address) return errorResponse("Adresa este obligatorie", 400);
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) {
+      return errorResponse("Data nașterii trebuie să fie în formatul YYYY-MM-DD", 400);
+    }
+
     const documents = form.getAll("documents").filter((x) => x instanceof File) as File[];
     const selfie = form.get("selfie");
 
@@ -87,7 +103,16 @@ export async function POST(request: NextRequest) {
       dataUrl: selfieData.dataUrl,
     });
 
-    const reqCreated = createVerificationRequest({ userId: authed.decoded.userId, docKind: docKindRaw, uploads });
+    const reqCreated = createVerificationRequest({
+      userId: authed.decoded.userId,
+      docKind: docKindRaw,
+      legalFullName,
+      country,
+      birthDate,
+      city,
+      address,
+      uploads,
+    });
 
     appendAuditLog({
       type: "verification_submitted",

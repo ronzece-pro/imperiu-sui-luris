@@ -5,6 +5,7 @@ import { errorResponse, successResponse } from "@/lib/api/response";
 import { mockDatabase } from "@/lib/db/config";
 import { appendAuditLog } from "@/lib/audit/persistence";
 import { decideVerificationRequest, listVerificationRequests } from "@/lib/verification/persistence";
+import { createNotification } from "@/lib/notifications/persistence";
 import type { VerificationStatus } from "@/types";
 
 function requireAdmin(request: NextRequest) {
@@ -68,6 +69,35 @@ export async function PUT(request: NextRequest) {
     });
 
     if (!updated) return errorResponse("Request not found", 404);
+
+    if (updated.status === "approved") {
+      createNotification({
+        userId: updated.userId,
+        type: "verification_decided",
+        title: "Verificare aprobată",
+        body: "Cererea ta de verificare a fost aprobată.",
+        href: "/profile",
+        metadata: { requestId: updated.id, status: updated.status },
+      });
+    } else if (updated.status === "rejected") {
+      createNotification({
+        userId: updated.userId,
+        type: "verification_decided",
+        title: "Verificare respinsă",
+        body: updated.adminNote ? `Cererea ta a fost respinsă: ${updated.adminNote}` : "Cererea ta de verificare a fost respinsă.",
+        href: "/verification",
+        metadata: { requestId: updated.id, status: updated.status },
+      });
+    } else if (updated.status === "resubmit_required") {
+      createNotification({
+        userId: updated.userId,
+        type: "verification_decided",
+        title: "Reîncarcă documentele",
+        body: updated.adminNote ? `Te rugăm să retrimiți documentele: ${updated.adminNote}` : "Te rugăm să retrimiți documentele pentru verificare.",
+        href: "/verification",
+        metadata: { requestId: updated.id, status: updated.status },
+      });
+    }
 
     appendAuditLog({
       type: "verification_decided",

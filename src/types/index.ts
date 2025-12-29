@@ -151,3 +151,4 @@ export * from "./chat";
 export * from "./verification";
 export * from "./audit";
 export * from "./invite";
+export * from "./notification";

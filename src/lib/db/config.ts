@@ -14,6 +14,7 @@ import type {
   Document,
   InviteCode,
   MarketplaceItem,
+  Notification,
   VerificationRequest,
 } from "@/types";
 
@@ -144,6 +145,7 @@ export const mockDatabase = {
   chatReports: [] as ChatReport[],
   verificationRequests: [] as VerificationRequest[],
   auditLogs: [] as AuditLogEntry[],
+  notifications: [] as Notification[],
   // Seed invite for initial onboarding/testing (single-use per runtime)
   invites: [
     {

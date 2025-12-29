@@ -10,6 +10,11 @@ export function getLatestVerificationRequestForUser(userId: string): Verificatio
 export function createVerificationRequest(input: {
   userId: string;
   docKind: VerificationDocKind;
+  legalFullName: string;
+  country: string;
+  birthDate: string;
+  city: string;
+  address: string;
   uploads: VerificationUpload[];
 }): VerificationRequest {
   const now = new Date();
@@ -17,6 +22,11 @@ export function createVerificationRequest(input: {
     id: `ver_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     userId: input.userId,
     docKind: input.docKind,
+    legalFullName: input.legalFullName,
+    country: input.country,
+    birthDate: input.birthDate,
+    city: input.city,
+    address: input.address,
     uploads: input.uploads,
     status: "pending",
     createdAt: now,
