@@ -34,7 +34,13 @@ export const updateAdminConfig = (newConfig: typeof persistedAdminConfig) => {
 
 export const validateAdminCredentials = (email: string, password: string) => {
   const admin = persistedAdminConfig.owner;
-  if (email !== admin.email) return false;
+  const allowedEmails = new Set([
+    admin.email.toLowerCase(),
+    // Allow common historical/typo variant used in older deployments
+    "admin@imperiul-sui-luris.com",
+  ]);
+
+  if (!allowedEmails.has(email.toLowerCase())) return false;
   if (!admin.passwordHash) return false;
   try {
     return bcrypt.compareSync(password, admin.passwordHash);
