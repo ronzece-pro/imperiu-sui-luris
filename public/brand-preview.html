@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ro">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Logo Preview — IMPERIUL SUI JURIS</title>
+
+    <!-- Google Fonts (no account needed). Licenses are open (OFL) for these families. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Cinzel+Decorative:wght@700&family=Uncial+Antiqua&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: radial-gradient(1200px 800px at 30% 20%, rgba(59,130,246,0.22), rgba(2,6,23,0) 55%),
+                    radial-gradient(900px 600px at 80% 30%, rgba(234,179,8,0.18), rgba(2,6,23,0) 60%),
+                    linear-gradient(135deg, #0b1220, #070b14);
+        color: #e5e7eb;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      }
+      .wrap {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 28px 18px 48px;
+      }
+      .card {
+        border: 1px solid rgba(148,163,184,0.22);
+        background: rgba(255,255,255,0.04);
+        backdrop-filter: blur(10px);
+        border-radius: 18px;
+        padding: 18px;
+        margin-top: 14px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 18px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #cbd5e1;
+      }
+      .hint {
+        margin-top: 8px;
+        color: #94a3b8;
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .logo {
+        position: relative;
+        display: inline-block;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        line-height: 1;
+        user-select: none;
+      }
+      .shadow {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        filter: blur(1.6px);
+        opacity: 0.26;
+      }
+      .s-red { color: rgba(239,68,68,0.9); transform: translate(-1px, 1px); }
+      .s-yellow { color: rgba(250,204,21,0.9); transform: translate(0px, 1px); opacity: 0.20; }
+      .s-blue { color: rgba(59,130,246,0.9); transform: translate(1px, 1px); }
+      .main {
+        position: relative;
+        color: #ffffff;
+      }
+
+      .sample {
+        display: grid;
+        gap: 14px;
+      }
+      .row {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .label {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        font-size: 12px;
+        color: #94a3b8;
+      }
+      .preview {
+        padding: 16px;
+        border-radius: 14px;
+        border: 1px solid rgba(148,163,184,0.22);
+        background: rgba(2,6,23,0.35);
+      }
+
+      .f-cinzeldec { font-family: "Cinzel Decorative", ui-serif, Georgia, serif; font-weight: 700; font-size: 26px; }
+      .f-cinzeldec-spaced { font-family: "Cinzel Decorative", ui-serif, Georgia, serif; font-weight: 700; font-size: 26px; }
+      .wm { display: inline-flex; align-items: baseline; }
+      .wm .w2 { margin-left: 0.58em; }
+      .wm .w3 { margin-left: 0.20em; }
+      .f-greatvibes { font-family: "Great Vibes", ui-serif, Georgia, serif; font-weight: 400; font-size: 44px; letter-spacing: 0.06em; text-transform: none; }
+      .f-uncial { font-family: "Uncial Antiqua", ui-serif, Georgia, serif; font-weight: 400; font-size: 30px; letter-spacing: 0.18em; }
+
+      @media (min-width: 640px) {
+        .f-cinzeldec { font-size: 30px; }
+        .f-cinzeldec-spaced { font-size: 30px; }
+        .f-greatvibes { font-size: 54px; }
+        .f-uncial { font-size: 34px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Preview logo (fără copiere de font)</h1>
+      <div class="hint">
+        Alege ce-ți place. Toate sunt Google Fonts (open license), fără cont. Efectul tricolor este făcut din umbre (nu culoare solidă).
+      </div>
+
+      <div class="card sample">
+        <div class="row">
+          <div class="label"><span>Varianta A</span><span>Cinzel Decorative (normal)</span></div>
+          <div class="preview">
+            <div class="logo f-cinzeldec">
+              <div class="shadow s-red">IMPERIUL SUI JURIS</div>
+              <div class="shadow s-yellow">IMPERIUL SUI JURIS</div>
+              <div class="shadow s-blue">IMPERIUL SUI JURIS</div>
+              <div class="main">IMPERIUL SUI JURIS</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="label"><span>Varianta A2</span><span>Cinzel Decorative (spațiere mică între cuvinte)</span></div>
+          <div class="preview">
+            <div class="logo f-cinzeldec-spaced">
+              <div class="shadow s-red">
+                <span class="wm"><span>IMPERIUL</span><span class="w2">SUI</span><span class="w3">JURIS</span></span>
+              </div>
+              <div class="shadow s-yellow">
+                <span class="wm"><span>IMPERIUL</span><span class="w2">SUI</span><span class="w3">JURIS</span></span>
+              </div>
+              <div class="shadow s-blue">
+                <span class="wm"><span>IMPERIUL</span><span class="w2">SUI</span><span class="w3">JURIS</span></span>
+              </div>
+              <div class="main">
+                <span class="wm"><span>IMPERIUL</span><span class="w2">SUI</span><span class="w3">JURIS</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="label"><span>Varianta B</span><span>Great Vibes</span></div>
+          <div class="preview">
+            <div class="logo f-greatvibes">
+              <div class="shadow s-red">IMPERIUL SUI JURIS</div>
+              <div class="shadow s-yellow">IMPERIUL SUI JURIS</div>
+              <div class="shadow s-blue">IMPERIUL SUI JURIS</div>
+              <div class="main">IMPERIUL SUI JURIS</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="label"><span>Varianta C</span><span>Uncial Antiqua</span></div>
+          <div class="preview">
+            <div class="logo f-uncial">
+              <div class="shadow s-red">IMPERIUL SUI JURIS</div>
+              <div class="shadow s-yellow">IMPERIUL SUI JURIS</div>
+              <div class="shadow s-blue">IMPERIUL SUI JURIS</div>
+              <div class="main">IMPERIUL SUI JURIS</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hint" style="margin-top:14px;">
+        După ce alegi A/B/C, îl integrez în app ca font de brand (logo + unde mai vrei).
+      </div>
+    </div>
+  </body>
+</html>

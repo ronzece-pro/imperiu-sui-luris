@@ -165,12 +165,22 @@ export default function Header() {
     router.push("/");
   };
 
+  const Wordmark = ({ className, ...rest }: React.HTMLAttributes<HTMLSpanElement>) => (
+    <span className={className} {...rest}>
+      <span className="inline-flex items-baseline whitespace-nowrap">
+        <span>IMPERIUL</span>
+        <span style={{ marginLeft: "0.58em" }}>SUI</span>
+        <span style={{ marginLeft: "0.20em" }}>JURIS</span>
+      </span>
+    </span>
+  );
+
   return (
     <nav className="bg-black bg-opacity-40 backdrop-blur-lg border-b border-slate-700 sticky top-0 z-50">
       <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
         <div className="flex justify-between items-center h-14 sm:h-16">
           <Link href="/" className="flex items-center space-x-2 group flex-shrink-0">
-            <div className="relative w-7 h-7 sm:w-8 sm:h-8">
+            <div className="relative w-8 h-8 sm:w-9 sm:h-9">
               <Image
                 src="/stema.png"
                 alt="Stema Imperiul Sui Juris"
@@ -180,27 +190,19 @@ export default function Header() {
             </div>
             <span className="hidden sm:inline whitespace-nowrap">
               <span className="relative inline-block font-[var(--font-brand)] font-bold uppercase tracking-[0.22em] text-sm sm:text-lg leading-none">
-                <span
+                <Wordmark
+                  className="pointer-events-none select-none absolute inset-0 text-red-500/30 blur-[1.75px] translate-x-[-1px] translate-y-[1px]"
                   aria-hidden="true"
-                  className="pointer-events-none select-none absolute inset-0 text-red-500/25 blur-[1.5px] translate-x-[-1px] translate-y-[1px]"
-                >
-                  IMPERIUL SUI JURIS
-                </span>
-                <span
+                />
+                <Wordmark
+                  className="pointer-events-none select-none absolute inset-0 text-yellow-400/22 blur-[1.75px] translate-y-[1px]"
                   aria-hidden="true"
-                  className="pointer-events-none select-none absolute inset-0 text-yellow-400/20 blur-[1.5px] translate-y-[1px]"
-                >
-                  IMPERIUL SUI JURIS
-                </span>
-                <span
+                />
+                <Wordmark
+                  className="pointer-events-none select-none absolute inset-0 text-blue-500/30 blur-[1.75px] translate-x-[1px] translate-y-[1px]"
                   aria-hidden="true"
-                  className="pointer-events-none select-none absolute inset-0 text-blue-500/25 blur-[1.5px] translate-x-[1px] translate-y-[1px]"
-                >
-                  IMPERIUL SUI JURIS
-                </span>
-                <span className="relative text-white group-hover:text-blue-200 transition">
-                  IMPERIUL SUI JURIS
-                </span>
+                />
+                <Wordmark className="relative text-white group-hover:text-blue-200 transition" />
               </span>
             </span>
           </Link>
