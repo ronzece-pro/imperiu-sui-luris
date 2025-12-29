@@ -72,7 +72,16 @@ function hkdfInfo(myUserId: string, otherUserId: string) {
 export async function loadOrCreateIdentityKeyPair(): Promise<StoredKeyPair> {
   const existing = await idbGet<StoredKeyPair>(KEY_ID);
   if (existing?.algorithm === "ECDH-P256" && existing.publicJwk && existing.privateJwk) return existing;
+  return createAndStoreIdentityKeyPair();
+}
 
+export async function loadIdentityKeyPairIfExists(): Promise<StoredKeyPair | null> {
+  const existing = await idbGet<StoredKeyPair>(KEY_ID);
+  if (existing?.algorithm === "ECDH-P256" && existing.publicJwk && existing.privateJwk) return existing;
+  return null;
+}
+
+export async function createAndStoreIdentityKeyPair(): Promise<StoredKeyPair> {
   const keyPair = await crypto.subtle.generateKey(
     { name: "ECDH", namedCurve: "P-256" },
     true,

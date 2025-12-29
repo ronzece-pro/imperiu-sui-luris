@@ -6,7 +6,8 @@ import Navbar from "@/components/layout/Navbar";
 import {
   decryptPrivateMessage,
   encryptPrivateMessage,
-  loadOrCreateIdentityKeyPair,
+  createAndStoreIdentityKeyPair,
+  loadIdentityKeyPairIfExists,
 } from "@/lib/chat/e2eClient";
 
 type ChatUser = {
@@ -99,6 +100,8 @@ export default function ChatPage() {
   const isPrivate = Boolean(selectedUserId);
   const canUseGlobal = Boolean(me?.isVerified);
 
+  const e2eReady = Boolean(isPrivate && e2e && otherPublicJwk);
+
   const filteredUsers = useMemo(() => {
     const q = userQuery.trim().toLowerCase();
     const list = users.filter((u) => !q || u.name.toLowerCase().includes(q));
@@ -160,11 +163,12 @@ export default function ChatPage() {
 
     const ensureKeys = async () => {
       try {
-        const kp = await loadOrCreateIdentityKeyPair();
+        // IMPORTANT: don't auto-generate/publish keys (incognito would overwrite server key).
+        const kp = await loadIdentityKeyPairIfExists();
+        if (!kp) return;
         if (cancelled) return;
         setE2e({ publicJwk: kp.publicJwk, privateJwk: kp.privateJwk });
 
-        // publish public key (idempotent)
         await fetch("/api/chat/keys", {
           method: "PUT",
           headers: {
@@ -183,6 +187,30 @@ export default function ChatPage() {
       cancelled = true;
     };
   }, [token, me?.id]);
+
+  const activateE2EOnThisDevice = async () => {
+    if (!token || !me?.id) return;
+    const ok = window.confirm(
+      "Activezi E2E pe acest device? În mod incognito, cheile se pierd la închidere și poate afecta decriptarea în alte sesiuni."
+    );
+    if (!ok) return;
+
+    try {
+      const kp = await createAndStoreIdentityKeyPair();
+      setE2e({ publicJwk: kp.publicJwk, privateJwk: kp.privateJwk });
+
+      await fetch("/api/chat/keys", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ algorithm: "ECDH-P256", publicKeyJwk: kp.publicJwk }),
+      });
+    } catch {
+      setError("Nu am putut activa E2E pe acest device");
+    }
+  };
 
   useEffect(() => {
     if (!token || !me?.id) return;
@@ -632,7 +660,15 @@ export default function ChatPage() {
                   </div>
                   {isPrivate ? (
                     <div className="text-xs text-gray-400">
-                      {e2e && otherPublicJwk ? "Criptat end-to-end (E2E)" : "E2E indisponibil pe acest device"}
+                        {e2eReady ? "Criptat end-to-end (E2E)" : "E2E indisponibil pe acest device"}
+                        {!e2e && (
+                          <button
+                            onClick={() => void activateE2EOnThisDevice()}
+                            className="ml-2 text-xs underline text-blue-300 hover:text-blue-200"
+                          >
+                            Activează E2E
+                          </button>
+                        )}
                     </div>
                   ) : null}
                 </div>
