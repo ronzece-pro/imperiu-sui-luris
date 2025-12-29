@@ -1,170 +1,244 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 
-interface Post {
+type ItemType = "document" | "land" | "resource";
+
+interface MarketplaceItem {
   id: string;
-  title: string;
-  content: string;
-  author: string;
-  image?: string;
+  type: ItemType;
+  name: string;
+  description: string;
   price: number;
-  currency: "USD" | "LURIS";
-  createdAt: string;
-  likes: number;
-  comments: number;
+  currency: string;
+  availability: number;
+  documentType?: "bulletin" | "passport" | "certificate";
+  landZone?: string;
+  landAreaSize?: number;
+  landType?: "agricultural" | "forest" | "water" | "mixed";
+  createdAt?: string;
 }
 
 export default function AdminPostManagement() {
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [items, setItems] = useState<MarketplaceItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [selectedItem, setSelectedItem] = useState<MarketplaceItem | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [createKind, setCreateKind] = useState<"document" | "land">("document");
 
   const [formData, setFormData] = useState({
-    title: "",
-    content: "",
-    image: null as File | null,
+    name: "",
+    description: "",
     price: 0,
-    currency: "USD" as "USD" | "LURIS",
+    availability: 1,
+    documentType: "bulletin" as "bulletin" | "passport" | "certificate",
+    landZone: "",
+    landAreaSize: 1000,
+    landType: "mixed" as "agricultural" | "forest" | "water" | "mixed",
   });
 
   useEffect(() => {
-    fetchPosts();
+    fetchItems();
   }, []);
 
-  const fetchPosts = async () => {
+  const fetchItems = async () => {
     try {
       setIsLoading(true);
-      const mockPosts: Post[] = [
-        {
-          id: "post_1",
-          title: "Document Oficial - Certificat Cetățenie",
-          content: "Certificat oficial de cetățenie cu drepturi depline în Imperiul Sui Luris...",
-          author: "admin",
-          price: 50,
-          currency: "USD",
-          createdAt: "2024-03-15",
-          likes: 234,
-          comments: 45,
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setItems([]);
+        return;
+      }
+
+      const response = await fetch("/api/admin/marketplace", {
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
-        {
-          id: "post_2",
-          title: "Teren Premium - Loc Central",
-          content: "Teren premium în locație centrală cu acces la toate facilitățile...",
-          author: "admin",
-          price: 99.99,
-          currency: "USD",
-          createdAt: "2024-03-14",
-          likes: 156,
-          comments: 28,
-        },
-        {
-          id: "post_3",
-          title: "Anunț Gratuit - Informații Generale",
-          content: "Informații gratuite despre Imperiul Sui Luris și cum să devii cetățean...",
-          author: "admin",
-          price: 0,
-          currency: "USD",
-          createdAt: "2024-03-13",
-          likes: 512,
-          comments: 87,
-        },
-      ];
-      setPosts(mockPosts);
+      });
+
+      const data = await response.json();
+      if (data?.success) {
+        setItems(data.data);
+      } else {
+        setItems([]);
+      }
     } catch (error) {
-      console.error("Error fetching posts:", error);
+      console.error("Error fetching items:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleFileSelect = () => {
-    fileInputRef.current?.click();
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      description: "",
+      price: 0,
+      availability: 1,
+      documentType: "bulletin",
+      landZone: "",
+      landAreaSize: 1000,
+      landType: "mixed",
+    });
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFormData((prev) => ({ ...prev, image: file }));
-    }
-  };
-
-  const handleCreatePost = async () => {
-    if (!formData.title.trim() || !formData.content.trim()) {
-      alert("Te rog completează titlul și conținutul");
+  const handleCreateItem = async () => {
+    if (!formData.name.trim() || !formData.description.trim()) {
+      alert("Te rog completează numele și descrierea");
       return;
     }
 
     try {
-      const newPost: Post = {
-        id: `post_${Date.now()}`,
-        title: formData.title,
-        content: formData.content,
-        author: "admin",
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Trebuie să fii logat ca admin");
+        return;
+      }
+
+      const payload: Record<string, unknown> = {
+        type: createKind,
+        name: formData.name.trim(),
+        description: formData.description.trim(),
         price: formData.price,
-        currency: formData.currency,
-        createdAt: new Date().toISOString().split("T")[0],
-        likes: 0,
-        comments: 0,
+        currency: "credits",
+        availability: formData.availability,
       };
 
-      setPosts((prev) => [newPost, ...prev]);
-      setFormData({ title: "", content: "", image: null, price: 0, currency: "USD" });
+      if (createKind === "document") {
+        payload.documentType = formData.documentType;
+      }
+
+      if (createKind === "land") {
+        payload.landZone = formData.landZone.trim();
+        payload.landAreaSize = formData.landAreaSize;
+        payload.landType = formData.landType;
+      }
+
+      const response = await fetch("/api/admin/marketplace", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+      if (!data?.success) {
+        alert(data?.error || "Eroare la crearea produsului");
+        return;
+      }
+
+      resetForm();
       setShowCreateModal(false);
+      await fetchItems();
     } catch (error) {
-      console.error("Error creating post:", error);
-      alert("Eroare la crearea postării");
+      console.error("Error creating item:", error);
+      alert("Eroare la crearea produsului");
     }
   };
 
-  const handleDeletePost = (id: string) => {
-    if (confirm("Sunteti sigur ca doriti sa stergeți aceasta postare?")) {
-      setPosts((prev) => prev.filter((p) => p.id !== id));
+  const handleDeleteItem = async (id: string) => {
+    if (!confirm("Sunteți sigur că doriți să ștergeți acest produs?")) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Trebuie să fii logat ca admin");
+        return;
+      }
+
+      const response = await fetch(`/api/admin/marketplace?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (!data?.success) {
+        alert(data?.error || "Eroare la ștergere");
+        return;
+      }
+
+      await fetchItems();
+    } catch (error) {
+      console.error("Error deleting item:", error);
+      alert("Eroare la ștergere");
     }
   };
 
-  const handleEditPost = async () => {
-    if (!selectedPost) return;
+  const handleEditItem = async () => {
+    if (!selectedItem) return;
 
-    if (!formData.title.trim() || !formData.content.trim()) {
-      alert("Te rog completează titlul și conținutul");
+    if (!formData.name.trim() || !formData.description.trim()) {
+      alert("Te rog completează numele și descrierea");
       return;
     }
 
     try {
-      setPosts((prev) =>
-        prev.map((p) =>
-          p.id === selectedPost.id
-            ? {
-                ...p,
-                title: formData.title,
-                content: formData.content,
-                price: formData.price,
-                currency: formData.currency,
-              }
-            : p
-        )
-      );
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Trebuie să fii logat ca admin");
+        return;
+      }
+
+      const payload: Record<string, unknown> = {
+        id: selectedItem.id,
+        name: formData.name.trim(),
+        description: formData.description.trim(),
+        price: formData.price,
+        availability: formData.availability,
+      };
+
+      if (selectedItem.type === "document") {
+        payload.documentType = formData.documentType;
+      }
+
+      if (selectedItem.type === "land") {
+        payload.landZone = formData.landZone.trim();
+        payload.landAreaSize = formData.landAreaSize;
+        payload.landType = formData.landType;
+      }
+
+      const response = await fetch("/api/admin/marketplace", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+      if (!data?.success) {
+        alert(data?.error || "Eroare la editare");
+        return;
+      }
+
       setShowEditModal(false);
-      setSelectedPost(null);
-      setFormData({ title: "", content: "", image: null, price: 0, currency: "USD" });
+      setSelectedItem(null);
+      resetForm();
+      await fetchItems();
     } catch (error) {
-      console.error("Error editing post:", error);
-      alert("Eroare la editarea postării");
+      console.error("Error editing item:", error);
+      alert("Eroare la editare");
     }
   };
 
-  const openEditModal = (post: Post) => {
-    setSelectedPost(post);
+  const openEditModal = (item: MarketplaceItem) => {
+    setSelectedItem(item);
     setFormData({
-      title: post.title,
-      content: post.content,
-      image: null,
-      price: post.price,
-      currency: post.currency,
+      name: item.name,
+      description: item.description,
+      price: item.price,
+      availability: item.availability,
+      documentType: item.documentType || "bulletin",
+      landZone: item.landZone || "",
+      landAreaSize: item.landAreaSize || 1000,
+      landType: item.landType || "mixed",
     });
     setShowEditModal(true);
   };
@@ -175,12 +249,12 @@ export default function AdminPostManagement() {
       <div>
         <button
           onClick={() => {
-            setFormData({ title: "", content: "", image: null, price: 0, currency: "USD" });
+            resetForm();
             setShowCreateModal(true);
           }}
           className="px-6 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-medium transition w-full sm:w-auto"
         >
-          ➕ Creează Postare Nouă
+          ➕ Creează Produs Nou
         </button>
       </div>
 
@@ -188,53 +262,65 @@ export default function AdminPostManagement() {
       <div className="space-y-4">
         {isLoading ? (
           <div className="text-center py-8 text-gray-400">Se încarcă...</div>
-        ) : posts.length > 0 ? (
-          posts.map((post) => (
+        ) : items.length > 0 ? (
+          items.map((item) => (
             <div
-              key={post.id}
+              key={item.id}
               className="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-6 hover:border-gray-700 transition"
             >
               <div className="flex justify-between items-start gap-4 mb-3">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-lg font-bold text-white">{post.title}</h3>
-                    {post.price > 0 && (
-                      <span className="px-2 py-1 bg-blue-900 text-blue-200 text-xs rounded font-bold">
-                        💰 ${post.price.toFixed(2)}
+                    <h3 className="text-lg font-bold text-white">{item.name}</h3>
+                    <span className="px-2 py-1 bg-gray-800 text-gray-200 text-xs rounded font-bold">
+                      {item.type === "document" ? "📄 Act" : item.type === "land" ? "🌍 Teren" : "📦 Resursă"}
+                    </span>
+                    {item.type === "document" && item.documentType && (
+                      <span className="px-2 py-1 bg-purple-900 text-purple-200 text-xs rounded font-bold">
+                        {item.documentType}
                       </span>
                     )}
-                    {post.price === 0 && (
-                      <span className="px-2 py-1 bg-green-900 text-green-200 text-xs rounded font-bold">
-                        🆓 Gratuit
+                    {item.type === "land" && typeof item.landAreaSize === "number" && (
+                      <span className="px-2 py-1 bg-emerald-900 text-emerald-200 text-xs rounded font-bold">
+                        {item.landAreaSize.toLocaleString()} m²
+                      </span>
+                    )}
+                    <span className="px-2 py-1 bg-blue-900 text-blue-200 text-xs rounded font-bold">
+                      💰 {item.price}
+                    </span>
+                    {item.availability === 0 && (
+                      <span className="px-2 py-1 bg-red-900 text-red-200 text-xs rounded font-bold">
+                        Stoc epuizat
+                      </span>
+                    )}
+                    {item.availability > 0 && (
+                      <span className="px-2 py-1 bg-gray-800 text-gray-300 text-xs rounded font-bold">
+                        Stoc: {item.availability}
+                      </span>
+                    )}
+                    {item.price > 0 && (
+                      <span className="px-2 py-1 bg-blue-900 text-blue-200 text-xs rounded font-bold">
+                        credite
                       </span>
                     )}
                   </div>
                   <p className="text-xs text-gray-500">
-                    {post.createdAt} • {post.author}
+                    ID: {item.id}
                   </p>
                 </div>
               </div>
 
-              <p className="text-gray-300 text-sm mb-4 line-clamp-3">
-                {post.content}
-              </p>
-
-              <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
-                <div className="text-xs text-gray-400 space-x-4 flex">
-                  <span>❤️ {post.likes}</span>
-                  <span>💬 {post.comments}</span>
-                </div>
-              </div>
+              <p className="text-gray-300 text-sm mb-4 line-clamp-3">{item.description}</p>
 
               <div className="flex gap-2">
                 <button
-                  onClick={() => openEditModal(post)}
+                  onClick={() => openEditModal(item)}
                   className="flex-1 sm:flex-none px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition"
                 >
                   ✏️ Editare
                 </button>
                 <button
-                  onClick={() => handleDeletePost(post.id)}
+                  onClick={() => handleDeleteItem(item.id)}
                   className="flex-1 sm:flex-none px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-medium transition"
                 >
                   🗑️ Ștergere
@@ -244,7 +330,7 @@ export default function AdminPostManagement() {
           ))
         ) : (
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center text-gray-400">
-            <p>Nu exista postari inca</p>
+            <p>Nu există produse încă</p>
           </div>
         )}
       </div>
@@ -254,100 +340,171 @@ export default function AdminPostManagement() {
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-gray-900 border border-gray-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
             <h3 className="text-lg font-bold mb-4">
-              {showEditModal ? "Editare Postare" : "Postare Nouă"}
+              {showEditModal ? "Editare Produs" : "Produs Nou"}
             </h3>
+
+            {!showEditModal && (
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                <button
+                  onClick={() => setCreateKind("document")}
+                  className={`px-4 py-3 rounded-lg font-medium transition text-sm ${
+                    createKind === "document" ? "bg-blue-600 text-white" : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                  }`}
+                >
+                  📄 Acte
+                </button>
+                <button
+                  onClick={() => setCreateKind("land")}
+                  className={`px-4 py-3 rounded-lg font-medium transition text-sm ${
+                    createKind === "land" ? "bg-blue-600 text-white" : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                  }`}
+                >
+                  🌍 Terenuri
+                </button>
+              </div>
+            )}
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Titlu</label>
+                <label className="block text-sm font-medium mb-2">Nume</label>
                 <input
                   type="text"
-                  value={formData.title}
+                  value={formData.name}
                   onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, title: e.target.value }))
+                    setFormData((prev) => ({ ...prev, name: e.target.value }))
                   }
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
-                  placeholder="Introdu titlul postării..."
+                  placeholder="Introdu numele produsului..."
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Conținut</label>
+                <label className="block text-sm font-medium mb-2">Descriere</label>
                 <textarea
-                  value={formData.content}
+                  value={formData.description}
                   onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
-                      content: e.target.value,
+                      description: e.target.value,
                     }))
                   }
                   rows={6}
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 resize-none"
-                  placeholder="Introdu conținutul postării..."
+                  placeholder="Introdu descrierea produsului..."
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Preț</label>
+                  <label className="block text-sm font-medium mb-2">Preț (credite)</label>
                   <input
                     type="number"
                     value={formData.price}
                     onChange={(e) =>
                       setFormData((prev) => ({
                         ...prev,
-                        price: parseFloat(e.target.value) || 0,
+                        price: Number(e.target.value) || 0,
                       }))
                     }
-                    step="0.01"
+                    step="1"
                     min="0"
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
-                    placeholder="0.00"
                   />
-                  <p className="text-xs text-gray-400 mt-1">
-                    0 = Gratuit | {">"} 0 = Plătit
-                  </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Monedă</label>
-                  <select
-                    value={formData.currency}
+                  <label className="block text-sm font-medium mb-2">Disponibilitate</label>
+                  <input
+                    type="number"
+                    value={formData.availability}
                     onChange={(e) =>
                       setFormData((prev) => ({
                         ...prev,
-                        currency: e.target.value as "USD" | "LURIS",
+                        availability: Number(e.target.value) || 0,
+                      }))
+                    }
+                    step="1"
+                    min="0"
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              {(showEditModal ? selectedItem?.type === "document" : createKind === "document") && (
+                <div>
+                  <label className="block text-sm font-medium mb-2">Tip document</label>
+                  <select
+                    value={formData.documentType}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        documentType: e.target.value as "bulletin" | "passport" | "certificate",
                       }))
                     }
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
                   >
-                    <option value="USD">💵 USD</option>
-                    <option value="LURIS">💎 LURIS</option>
+                    <option value="bulletin">Buletin</option>
+                    <option value="passport">Pașaport</option>
+                    <option value="certificate">Certificat</option>
                   </select>
                 </div>
-              </div>
+              )}
 
-              <div>
-                <label className="block text-sm font-medium mb-2">Imagine</label>
-                <button
-                  onClick={handleFileSelect}
-                  className="w-full px-4 py-3 bg-gray-800 hover:bg-gray-700 border-2 border-dashed border-gray-700 rounded-lg transition text-center"
-                >
-                  📁 Selectează Imagine
-                  {formData.image && (
-                    <span className="block text-sm text-green-400 mt-1">
-                      ✓ {formData.image.name}
-                    </span>
-                  )}
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-              </div>
+              {(showEditModal ? selectedItem?.type === "land" : createKind === "land") && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Zonă</label>
+                      <input
+                        type="text"
+                        value={formData.landZone}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            landZone: e.target.value,
+                          }))
+                        }
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+                        placeholder="Ex: Central"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">m²</label>
+                      <input
+                        type="number"
+                        value={formData.landAreaSize}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            landAreaSize: Number(e.target.value) || 0,
+                          }))
+                        }
+                        step="1"
+                        min="1"
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Tip teren</label>
+                    <select
+                      value={formData.landType}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          landType: e.target.value as "agricultural" | "forest" | "water" | "mixed",
+                        }))
+                      }
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="mixed">Mixed</option>
+                      <option value="agricultural">Agricol</option>
+                      <option value="forest">Pădure</option>
+                      <option value="water">Apă</option>
+                    </select>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3 mt-6">
@@ -355,17 +512,15 @@ export default function AdminPostManagement() {
                 onClick={() => {
                   setShowCreateModal(false);
                   setShowEditModal(false);
-                  setSelectedPost(null);
-                  setFormData({ title: "", content: "", image: null, price: 0, currency: "USD" });
+                  setSelectedItem(null);
+                  resetForm();
                 }}
                 className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition"
               >
                 Anulare
               </button>
               <button
-                onClick={
-                  showEditModal ? handleEditPost : handleCreatePost
-                }
+                onClick={showEditModal ? handleEditItem : handleCreateItem}
                 className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition"
               >
                 {showEditModal ? "Salvare" : "Creează"}

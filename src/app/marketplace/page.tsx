@@ -11,6 +11,8 @@ interface MarketplaceItem {
   price: number;
   documentType?: string;
   metalType?: string;
+  landZone?: string;
+  landAreaSize?: number;
   availability: number;
 }
 
@@ -127,6 +129,16 @@ export default function MarketplacePage() {
                 }`}
               >
                 Resurse
+              </button>
+              <button
+                onClick={() => setFilter("land")}
+                className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition ${
+                  filter === "land"
+                    ? "bg-blue-600 text-white"
+                    : "bg-white bg-opacity-10 text-gray-300 hover:bg-opacity-20"
+                }`}
+              >
+                Teren
               </button>
             </div>
             <input

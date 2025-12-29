@@ -1,4 +1,8 @@
 // User Types
+import type { UserBadge } from "@/lib/users/badges";
+
+export type UserRole = "user" | "admin";
+
 export interface User {
   id: string;
   email: string;
@@ -7,6 +11,8 @@ export interface User {
   fullName: string;
   country: string;
   citizenship: "pending" | "active" | "revoked";
+  role?: UserRole;
+  badge?: UserBadge;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,6 +33,7 @@ export interface Document {
   documentNumber: string;
   issueDate: Date;
   expiryDate?: Date;
+  html?: string;
   status: "active" | "expired" | "revoked";
   price: number;
   createdAt: Date;
@@ -67,6 +74,9 @@ export interface MarketplaceItem {
   metalType?: "silver" | "gold" | "diamond";
   quantity?: number;
   image?: string;
+  landZone?: string;
+  landAreaSize?: number;
+  landType?: "agricultural" | "forest" | "water" | "mixed";
   availability: number;
   createdBy: string;
   createdAt: Date;
