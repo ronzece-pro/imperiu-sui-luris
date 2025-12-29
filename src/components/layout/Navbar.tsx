@@ -178,8 +178,30 @@ export default function Header() {
                 className="object-contain hover:scale-110 transition-transform duration-300"
               />
             </div>
-            <span className="text-white text-sm sm:text-lg hidden sm:inline group-hover:text-blue-400 transition whitespace-nowrap font-[var(--font-brand)] font-semibold uppercase tracking-[0.18em]">
-              IMPERIUL SUI JURIS
+            <span className="hidden sm:inline whitespace-nowrap">
+              <span className="relative inline-block font-[var(--font-brand)] font-bold uppercase tracking-[0.22em] text-sm sm:text-lg leading-none">
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none select-none absolute inset-0 text-red-500/25 blur-[1.5px] translate-x-[-1px] translate-y-[1px]"
+                >
+                  IMPERIUL SUI JURIS
+                </span>
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none select-none absolute inset-0 text-yellow-400/20 blur-[1.5px] translate-y-[1px]"
+                >
+                  IMPERIUL SUI JURIS
+                </span>
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none select-none absolute inset-0 text-blue-500/25 blur-[1.5px] translate-x-[1px] translate-y-[1px]"
+                >
+                  IMPERIUL SUI JURIS
+                </span>
+                <span className="relative text-white group-hover:text-blue-200 transition">
+                  IMPERIUL SUI JURIS
+                </span>
+              </span>
             </span>
           </Link>
 

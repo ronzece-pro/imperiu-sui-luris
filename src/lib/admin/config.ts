@@ -135,6 +135,19 @@ Vânzările neautorizate sunt interzise.
     },
   },
 
+  // Public editable pages (in-memory)
+  pages: {
+    about: {
+      title: "Despre Imperiul Sui Juris",
+      subtitle: "Viziune, valori și direcția proiectului.",
+      markdown: `# Despre\n\nCompletează această pagină din Admin → Despre.\n\n- poți adăuga text (Markdown)\n- link-uri către imagini\n- link-uri către video\n- link-uri către fișiere (ex: PDF)\n`,
+      imageUrls: [] as string[],
+      videoUrls: [] as string[],
+      fileUrls: [] as string[],
+      updatedAt: new Date().toISOString(),
+    },
+  },
+
   // Admin Logs
   adminLogs: [] as unknown[],
 

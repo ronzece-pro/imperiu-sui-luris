@@ -14,6 +14,7 @@ import AdminChatReports from "@/components/admin/ChatReports";
 import AdminVerificationRequests from "@/components/admin/VerificationRequests";
 import AdminAuditLogs from "@/components/admin/AuditLogs";
 import AdminEmailSettings from "@/components/admin/EmailSettings";
+import AdminAboutPageSettings from "@/components/admin/AboutPageSettings";
 
 interface AdminStats {
   totalUsers: number;
@@ -202,6 +203,7 @@ export default function AdminDashboard() {
               { id: "payments", label: "Plăți", icon: "💳" },
               { id: "email", label: "Email", icon: "✉️" },
               { id: "luris", label: "Luris Points", icon: "💎" },
+              { id: "about", label: "Despre", icon: "ℹ️" },
               { id: "legal", label: "Pagini Legale", icon: "⚖️" },
               { id: "settings", label: "Setări", icon: "⚙️" },
             ].map((item) => (
@@ -354,6 +356,12 @@ export default function AdminDashboard() {
           {activeTab === "audit" && (
             <div className="p-4 sm:p-8">
               <AdminAuditLogs />
+            </div>
+          )}
+
+          {activeTab === "about" && (
+            <div className="p-4 sm:p-8">
+              <AdminAboutPageSettings />
             </div>
           )}
 
