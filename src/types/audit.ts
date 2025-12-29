@@ -1,4 +1,5 @@
 export type AuditEventType =
+  | "auth_login_success"
   | "marketplace_purchase"
   | "wallet_topup_stripe_pending"
   | "wallet_topup_stripe_completed"

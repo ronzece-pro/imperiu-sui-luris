@@ -15,6 +15,7 @@ import {
 } from "@/lib/security/authRateLimit";
 import { sendEmail } from "@/lib/email/sender";
 import { authLockoutTemplate } from "@/lib/email/templates";
+import { appendAuditLog } from "@/lib/audit/persistence";
 
 export async function POST(request: NextRequest) {
   try {
@@ -130,6 +131,17 @@ export async function POST(request: NextRequest) {
         const adminUserId = "user_admin";
         const adminEmail = "admin@imperiu-sui-luris.com";
         const token = createToken(adminUserId, adminEmail);
+
+        appendAuditLog({
+          type: "auth_login_success",
+          actorUserId: adminUserId,
+          message: "Admin login",
+          metadata: {
+            ip: clientIp,
+            userAgent: request.headers.get("user-agent") || "",
+          },
+        });
+
         return successResponse(
           {
             user: {
@@ -179,6 +191,17 @@ export async function POST(request: NextRequest) {
 
       clearAuthFailures(attemptKey);
       const token = createToken(user.id, user.email);
+
+      appendAuditLog({
+        type: "auth_login_success",
+        actorUserId: user.id,
+        message: "Login",
+        metadata: {
+          ip: clientIp,
+          userAgent: request.headers.get("user-agent") || "",
+        },
+      });
+
       return successResponse(
         {
           user: {

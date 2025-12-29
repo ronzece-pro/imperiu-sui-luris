@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 import { requireAuthenticatedUser } from "@/lib/auth/require";
 import { errorResponse, successResponse } from "@/lib/api/response";
 import { mockDatabase } from "@/lib/db/config";
-import { listAuditLogs } from "@/lib/audit/persistence";
+import { listAuditLogs, listAuditLogsForUser } from "@/lib/audit/persistence";
 
 function requireAdmin(request: NextRequest) {
   const authed = requireAuthenticatedUser(request);
@@ -25,7 +25,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const limit = Number(searchParams.get("limit") || 200);
 
-    const logs = listAuditLogs(limit);
+    const actorUserId = (searchParams.get("actorUserId") || "").trim();
+
+    const logs = actorUserId ? listAuditLogsForUser(actorUserId, limit) : listAuditLogs(limit);
     return successResponse({ logs });
   } catch {
     return errorResponse("Internal server error", 500);

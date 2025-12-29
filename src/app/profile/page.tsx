@@ -34,12 +34,23 @@ interface LandProperty {
   price: number;
 }
 
+interface AuditLogClient {
+  id: string;
+  type: string;
+  message: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}
+
 export default function ProfilePage() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [properties, setProperties] = useState<LandProperty[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
+  const [auditLogs, setAuditLogs] = useState<AuditLogClient[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditMessage, setAuditMessage] = useState<string>("");
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [invitees, setInvitees] = useState<Array<{ id: string; fullName: string; email: string; createdAt: string }>>(
     []
@@ -248,9 +259,44 @@ export default function ProfilePage() {
     }
   };
 
+  const loadAudit = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.push("/auth/login");
+      return;
+    }
+
+    try {
+      setAuditLoading(true);
+      setAuditMessage("");
+
+      const response = await fetch("/api/audit/me?limit=200", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        cache: "no-store",
+      });
+
+      const data = await response.json();
+      if (!data?.success) {
+        setAuditMessage(data?.error || "Eroare la încărcarea activității");
+        return;
+      }
+
+      setAuditLogs(Array.isArray(data.data?.logs) ? data.data.logs : []);
+    } catch {
+      setAuditMessage("Eroare la încărcarea activității");
+    } finally {
+      setAuditLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === "invites") {
       void loadInvites();
+    }
+    if (activeTab === "activity") {
+      void loadAudit();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
@@ -357,7 +403,7 @@ export default function ProfilePage() {
           {/* Tabs */}
           <div className="mb-6 md:mb-8">
             <div className="flex gap-2 sm:gap-4 border-b border-slate-700 overflow-x-auto">
-              {["overview", "documents", "properties", "wallet", "invites", "settings"].map((tab) => (
+              {["overview", "documents", "properties", "wallet", "invites", "activity", "settings"].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -372,6 +418,7 @@ export default function ProfilePage() {
                   {tab === "properties" && "🏠 Proprietăți"}
                   {tab === "wallet" && "💰 Portofel"}
                   {tab === "invites" && "🎟️ Invitații"}
+                  {tab === "activity" && "🧾 Activitate"}
                   {tab === "settings" && "⚙️ Setări"}
                 </button>
               ))}
@@ -510,6 +557,70 @@ export default function ProfilePage() {
                   </Link>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Activity Tab */}
+          {activeTab === "activity" && (
+            <div className="bg-white bg-opacity-5 backdrop-blur-lg border border-slate-700 rounded-xl p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <div>
+                  <h3 className="text-lg sm:text-xl font-bold text-white">Activitatea mea</h3>
+                  <p className="text-gray-400 text-xs sm:text-sm">Logări și acțiuni importante (IP + agent). </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={loadAudit}
+                  disabled={auditLoading}
+                  className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold text-xs sm:text-sm transition disabled:opacity-60"
+                >
+                  Reîncarcă
+                </button>
+              </div>
+
+              {auditMessage && (
+                <div className="bg-white bg-opacity-5 border border-slate-700 text-gray-200 px-4 py-3 rounded-lg text-sm mb-4">
+                  {auditMessage}
+                </div>
+              )}
+
+              {auditLoading ? (
+                <p className="text-gray-400 text-sm">Se încarcă...</p>
+              ) : auditLogs.length === 0 ? (
+                <p className="text-gray-400 text-sm">Nu există activitate înregistrată încă.</p>
+              ) : (
+                <div className="space-y-2">
+                  {auditLogs.map((log) => {
+                    const ip = log.metadata?.["ip"];
+                    const userAgent = log.metadata?.["userAgent"];
+
+                    return (
+                      <div
+                        key={log.id}
+                        className="bg-slate-800 rounded-lg p-4 border border-slate-700"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                          <p className="text-white font-semibold text-sm">
+                            {new Date(log.createdAt).toLocaleString("ro-RO")}
+                          </p>
+                          <p className="text-gray-400 text-xs">{log.type}</p>
+                        </div>
+                        <p className="text-gray-200 text-sm mt-1">{log.message}</p>
+                        {(Boolean(ip) || Boolean(userAgent)) && (
+                          <div className="mt-2 space-y-1 text-xs text-gray-400">
+                            {Boolean(ip) && <p>IP: {String(ip)}</p>}
+                            {Boolean(userAgent) && <p className="break-all">Agent: {String(userAgent)}</p>}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <p className="text-gray-500 text-xs mt-4">
+                Locația exactă nu este disponibilă încă (GeoIP neimplementat).
+              </p>
             </div>
           )}
 

@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
 type ChatReport = {
   id: string;
   reporterUserId: string;
+  reporterName?: string;
   reportedUserId: string;
+  reportedName?: string;
   roomId?: string;
   messageId?: string;
   reason: string;
@@ -84,8 +87,24 @@ export default function AdminChatReports() {
                 {sorted.map((r) => (
                   <tr key={r.id} className="hover:bg-gray-800 transition">
                     <td className="px-4 py-3 text-gray-400 whitespace-nowrap">{new Date(r.createdAt).toLocaleString("ro-RO")}</td>
-                    <td className="px-4 py-3 text-gray-200">{r.reporterUserId}</td>
-                    <td className="px-4 py-3 text-gray-200">{r.reportedUserId}</td>
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/admin/users/${encodeURIComponent(r.reporterUserId)}`}
+                        className="text-gray-200 hover:text-white underline"
+                      >
+                        {r.reporterName || r.reporterUserId}
+                      </Link>
+                      <div className="text-xs text-gray-500">{r.reporterUserId}</div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/admin/users/${encodeURIComponent(r.reportedUserId)}`}
+                        className="text-gray-200 hover:text-white underline"
+                      >
+                        {r.reportedName || r.reportedUserId}
+                      </Link>
+                      <div className="text-xs text-gray-500">{r.reportedUserId}</div>
+                    </td>
                     <td className="px-4 py-3 text-gray-300 max-w-md truncate">{r.reason}</td>
                     <td className="px-4 py-3 text-gray-400">
                       {r.evidence?.messageText ? (

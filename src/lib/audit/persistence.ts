@@ -75,3 +75,12 @@ export function listAuditLogs(limit = 200): AuditLogEntry[] {
   const safeLimit = Math.max(1, Math.min(1000, Math.floor(limit)));
   return [...mockDatabase.auditLogs].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, safeLimit);
 }
+
+export function listAuditLogsForUser(userId: string, limit = 200): AuditLogEntry[] {
+  pruneAuditLogs();
+  const safeLimit = Math.max(1, Math.min(1000, Math.floor(limit)));
+  return [...mockDatabase.auditLogs]
+    .filter((e) => e.actorUserId === userId)
+    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
+    .slice(0, safeLimit);
+}

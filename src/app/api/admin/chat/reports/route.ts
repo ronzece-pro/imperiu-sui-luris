@@ -14,7 +14,19 @@ export async function GET(request: NextRequest) {
     const viewerIsAdmin = viewer?.role === "admin" || viewer?.id === "user_admin";
     if (!viewerIsAdmin) return errorResponse("Forbidden", 403);
 
-    const reports = listChatReports(200);
+    const reports = listChatReports(200).map((r: any) => {
+      const reporter = mockDatabase.users.find((u) => u.id === r.reporterUserId);
+      const reported = mockDatabase.users.find((u) => u.id === r.reportedUserId);
+      const reporterName = reporter?.fullName || reporter?.username || reporter?.email || r.reporterUserId;
+      const reportedName = reported?.fullName || reported?.username || reported?.email || r.reportedUserId;
+
+      return {
+        ...r,
+        reporterName,
+        reportedName,
+      };
+    });
+
     return successResponse({ reports });
   } catch {
     return errorResponse("Internal server error", 500);

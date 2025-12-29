@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
 type AuditLogEntry = {
   id: string;
@@ -193,8 +194,19 @@ export default function AdminAuditLogs() {
                     <td className="px-4 py-3 text-gray-400 whitespace-nowrap">{new Date(l.createdAt).toLocaleString("ro-RO")}</td>
                     <td className="px-4 py-3 text-gray-200">{l.type}</td>
                     <td className="px-4 py-3">
-                      <div className="font-medium text-gray-200">{l.actorName || l.actorUserId || "—"}</div>
-                      {l.actorUserId ? <div className="text-xs text-gray-500">{l.actorUserId}</div> : null}
+                      {l.actorUserId ? (
+                        <>
+                          <Link
+                            href={`/admin/users/${encodeURIComponent(l.actorUserId)}`}
+                            className="font-medium text-gray-200 hover:text-white underline"
+                          >
+                            {l.actorName || l.actorUserId}
+                          </Link>
+                          <div className="text-xs text-gray-500">{l.actorUserId}</div>
+                        </>
+                      ) : (
+                        <div className="font-medium text-gray-200">{l.actorName || "—"}</div>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-gray-300">
                       <div className="max-w-2xl truncate">{l.message}</div>
