@@ -270,30 +270,41 @@ export default function AdminGrantDocuments() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Photo URL */}
+            {/* Photo Upload */}
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-slate-300 mb-2">
-                URL Fotografie *
+                Fotografie *
               </label>
-              <input
-                type="url"
-                value={formData.photoUrl}
-                onChange={(e) => setFormData({ ...formData, photoUrl: e.target.value })}
-                placeholder="https://example.com/photo.jpg"
-                className="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
-              />
-              {formData.photoUrl && (
-                <div className="mt-2">
-                  <img
-                    src={formData.photoUrl}
-                    alt="Preview"
-                    className="w-32 h-32 object-cover rounded-lg border-2 border-slate-600"
-                    onError={(e) => {
-                      e.currentTarget.style.display = "none";
+              <div className="flex gap-4 items-start">
+                <div className="flex-1">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        // Convert to base64
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setFormData({ ...formData, photoUrl: reader.result as string });
+                        };
+                        reader.readAsDataURL(file);
+                      }
                     }}
+                    className="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-cyan-600 file:text-white hover:file:bg-cyan-700 file:cursor-pointer"
                   />
+                  <p className="text-xs text-slate-400 mt-1">Poză passport: max 2MB, format JPG/PNG</p>
                 </div>
-              )}
+                {formData.photoUrl && (
+                  <div className="flex-shrink-0">
+                    <img
+                      src={formData.photoUrl}
+                      alt="Preview"
+                      className="w-32 h-40 object-cover rounded-lg border-2 border-cyan-500 shadow-lg"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Birth Date */}
@@ -440,7 +451,8 @@ export default function AdminGrantDocuments() {
           <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
             <p className="text-blue-300 text-sm font-semibold mb-1">ℹ️ Informații:</p>
             <ul className="text-blue-200/80 text-xs space-y-1">
-              <li>• Câmpurile marcate cu * sunt obligatorii</li>
+              <li>• Încarcă o poză de tip pașaport (fundal alb, dimensiune recomandată 600x800px)</li>
+              <li>• Fișierul va fi convertit automat în base64 și salvat în document</li>
               <li>• Se va genera automat un cod de verificare unic</li>
               <li>• Seria documentului va fi generată automat</li>
               <li>• Datele vor fi folosite pentru a personaliza documentul</li>

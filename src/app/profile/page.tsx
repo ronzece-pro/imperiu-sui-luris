@@ -501,7 +501,7 @@ export default function ProfilePage() {
             <div className="bg-white bg-opacity-5 backdrop-blur-lg border border-slate-700 rounded-xl p-4 sm:p-6">
               <h3 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6">Documentele Mele</h3>
               {documents.length > 0 ? (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                <div className="space-y-6">
                   {documents.map((doc) => {
                     const docTypeEmoji = doc.type === "bulletin" ? "🪪" :
                                         doc.type === "passport" ? "🛂" :
@@ -522,43 +522,48 @@ export default function ProfilePage() {
                     return (
                       <div
                         key={doc.id}
-                        className="bg-slate-800 rounded-lg overflow-hidden hover:bg-slate-700 transition border border-slate-700"
+                        className="bg-slate-800 rounded-lg overflow-hidden border border-slate-700"
                       >
-                        {/* Document Preview */}
-                        <div className="aspect-[3/4] bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center text-6xl relative overflow-hidden">
-                          {(doc as typeof doc & { photoUrl?: string }).photoUrl ? (
-                            <img
-                              src={(doc as typeof doc & { photoUrl?: string }).photoUrl}
-                              alt={doc.name}
-                              className="w-full h-full object-cover opacity-50"
-                            />
-                          ) : (
-                            <div className="text-slate-600">{docTypeEmoji}</div>
-                          )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent" />
-                          <div className="absolute bottom-4 left-4 right-4">
-                            <p className="text-white font-bold text-lg truncate">{doc.name}</p>
-                            <p className="text-gray-300 text-xs mt-1">
-                              {(doc as typeof doc & { documentNumber?: string }).documentNumber || doc.id}
-                            </p>
-                          </div>
-                        </div>
-                        
-                        {/* Document Info */}
-                        <div className="p-4 space-y-3">
-                          <div className="text-xs sm:text-sm text-gray-400 space-y-1">
-                            <p>Tip: <span className="text-white font-semibold">{doc.name}</span></p>
-                            <p>Emis: <span className="text-white font-semibold">{new Date(doc.issuedDate).toLocaleDateString("ro-RO")}</span></p>
-                            {(doc as typeof doc & { expiryDate?: string }).expiryDate && (
-                              <p>Expiră: <span className="text-white font-semibold">{new Date((doc as typeof doc & { expiryDate: string }).expiryDate).toLocaleDateString("ro-RO")}</span></p>
-                            )}
+                        {/* Document Header */}
+                        <div className="p-4 bg-slate-900 border-b border-slate-700 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <span className="text-3xl">{docTypeEmoji}</span>
+                            <div>
+                              <h4 className="text-white font-bold text-base">{doc.name}</h4>
+                              <p className="text-gray-400 text-xs">
+                                {(doc as typeof doc & { documentNumber?: string }).documentNumber || doc.id}
+                              </p>
+                            </div>
                           </div>
                           <button
                             onClick={handleDownload}
-                            className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2"
+                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition flex items-center gap-2"
                           >
-                            📥 Descarcă Document
+                            📥 Descarcă
                           </button>
+                        </div>
+
+                        {/* Document Preview - Full HTML in iframe */}
+                        <div className="p-4">
+                          <div className="bg-slate-900 rounded-lg overflow-hidden border-2 border-slate-700">
+                            <iframe
+                              srcDoc={(doc as typeof doc & { html?: string }).html || ''}
+                              className="w-full h-[600px] bg-white"
+                              title={doc.name}
+                              sandbox="allow-scripts allow-same-origin"
+                              style={{ transform: 'scale(0.85)', transformOrigin: 'top center', height: '700px' }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Document Info Footer */}
+                        <div className="p-4 bg-slate-900 border-t border-slate-700">
+                          <div className="text-xs text-gray-400 flex gap-4">
+                            <span>Emis: <span className="text-white font-semibold">{new Date(doc.issuedDate).toLocaleDateString("ro-RO")}</span></span>
+                            {(doc as typeof doc & { expiryDate?: string }).expiryDate && (
+                              <span>Expiră: <span className="text-white font-semibold">{new Date((doc as typeof doc & { expiryDate: string }).expiryDate).toLocaleDateString("ro-RO")}</span></span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
