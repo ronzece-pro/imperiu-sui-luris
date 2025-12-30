@@ -4,6 +4,7 @@ import { requireAuthenticatedUser } from "@/lib/auth/require";
 import { successResponse, errorResponse } from "@/lib/api/response";
 import { generateVerificationCode, renderDocumentHtml } from "@/lib/documents/render";
 import { appendAuditLog } from "@/lib/audit/persistence";
+import { createNotification } from "@/lib/notifications/persistence";
 import type { Document as ImperiuDocument, User } from "@/types";
 
 // Admin can grant documents to any user for free
@@ -79,6 +80,27 @@ export async function POST(request: NextRequest) {
     };
 
     mockDatabase.documents.push(newDocument);
+
+    // Create notification for recipient
+    const documentTypeNames: Record<string, string> = {
+      bulletin: "Buletin",
+      passport: "Pașaport",
+      certificate: "Certificat",
+      visitor_certificate: "Certificat de Vizitator",
+    };
+    
+    createNotification({
+      userId: targetUser.id,
+      type: "document_issued",
+      title: "📄 Document Primit",
+      body: `Ai primit ${documentTypeNames[documentType]} de la administrator (${documentNumber})`,
+      href: "/profile?tab=documents",
+      metadata: {
+        documentId,
+        documentType,
+        documentNumber,
+      },
+    });
 
     // Audit log
     appendAuditLog({

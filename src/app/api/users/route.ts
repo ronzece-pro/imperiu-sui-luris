@@ -20,8 +20,23 @@ export async function GET(request: NextRequest) {
       return notFoundResponse("User");
     }
 
-    // Get user's documents
-    const documents = mockDatabase.documents.filter((d) => d.userId === decoded.userId);
+    // Get user's documents with formatted data
+    const documents = mockDatabase.documents
+      .filter((d) => d.userId === decoded.userId)
+      .map((d) => ({
+        id: d.id,
+        type: d.type,
+        name: d.type === "bulletin" ? "Buletin de Identitate" :
+              d.type === "passport" ? "Pașaport" :
+              d.type === "certificate" ? "Certificat de Cetățenie" :
+              "Certificat de Vizitator",
+        documentNumber: d.documentNumber,
+        issuedDate: d.issueDate.toISOString(),
+        expiryDate: d.expiryDate ? d.expiryDate.toISOString() : undefined,
+        status: d.status,
+        photoUrl: d.photoUrl,
+        html: d.html,
+      }));
 
     // Get user's land properties
     const landProperties = mockDatabase.landProperties.filter((l) => l.userId === decoded.userId);

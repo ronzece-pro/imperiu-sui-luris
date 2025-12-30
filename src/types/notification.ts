@@ -1,4 +1,4 @@
-export type NotificationType = "verification_decided";
+export type NotificationType = "verification_decided" | "document_issued" | "admin_action";
 
 export type Notification = {
   id: string;
