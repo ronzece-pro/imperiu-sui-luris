@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
+import InsufficientFundsModal from "@/components/marketplace/InsufficientFundsModal";
 
 interface MarketplaceItem {
   id: string;
@@ -22,6 +23,8 @@ export default function MarketplacePage() {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [walletBalance, setWalletBalance] = useState(0);
+  const [showInsufficientModal, setShowInsufficientModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<{ name: string; price: number } | null>(null);
 
   useEffect(() => {
     const fetchWallet = async () => {
@@ -78,9 +81,10 @@ export default function MarketplacePage() {
       return;
     }
 
-    // Check wallet balance
+    // Check wallet balance - show elegant modal if insufficient
     if (walletBalance < itemPrice) {
-      alert(`❌ Sold insuficient!\n\nAi nevoie de ${itemPrice} LURIS.\nSoldul tău actual: ${walletBalance} LURIS.\n\nÎncarcă portofelul din Dashboard → Portofel.`);
+      setSelectedItem({ name: itemName, price: itemPrice });
+      setShowInsufficientModal(true);
       return;
     }
 
@@ -282,6 +286,20 @@ export default function MarketplacePage() {
           )}
         </div>
       </div>
+
+      {/* Insufficient Funds Modal */}
+      {showInsufficientModal && selectedItem && (
+        <InsufficientFundsModal
+          isOpen={showInsufficientModal}
+          onClose={() => {
+            setShowInsufficientModal(false);
+            setSelectedItem(null);
+          }}
+          requiredAmount={selectedItem.price}
+          currentBalance={walletBalance}
+          itemName={selectedItem.name}
+        />
+      )}
     </>
   );
 }
