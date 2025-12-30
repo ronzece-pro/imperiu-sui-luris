@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { userId, documentType } = body;
+    const { userId, documentType, personalization } = body;
 
     if (!userId || typeof userId !== "string") {
       return errorResponse("userId este obligatoriu", 400);
@@ -30,16 +30,51 @@ export async function POST(request: NextRequest) {
       return errorResponse("documentType invalid (bulletin, passport, certificate, visitor_certificate)", 400);
     }
 
+    // Validate personalization data
+    if (!personalization || typeof personalization !== "object") {
+      return errorResponse("Datele de personalizare sunt obligatorii", 400);
+    }
+
+    const {
+      photoUrl,
+      birthDate,
+      birthPlace,
+      cnp,
+      address,
+      nationality,
+      sex,
+      height,
+      eyeColor,
+    } = personalization;
+
+    if (!photoUrl || typeof photoUrl !== "string") {
+      return errorResponse("URL-ul fotografiei este obligatoriu", 400);
+    }
+
+    if (!birthDate || typeof birthDate !== "string") {
+      return errorResponse("Data nașterii este obligatorie", 400);
+    }
+
     // Find target user
     const targetUser = mockDatabase.users.find((u) => u.id === userId);
     if (!targetUser) {
       return errorResponse("Utilizatorul nu a fost găsit", 404);
     }
 
-    // Generate document
+    // Generate document with unique codes
     const issueDate = new Date();
-    const documentId = `doc_grant_${Date.now()}`;
-    const documentNumber = `ISL-GRANT-${Date.now().toString().slice(-6)}-${Math.random().toString(36).substring(7).toUpperCase()}`;
+    const timestamp = Date.now();
+    const documentId = `doc_grant_${timestamp}`;
+    
+    // Generate unique serial number based on document type
+    const serialPrefix: Record<string, string> = {
+      bulletin: "BUL",
+      passport: "PSP",
+      certificate: "CRT",
+      visitor_certificate: "VIS",
+    };
+    
+    const documentNumber = `ISJ-${serialPrefix[documentType]}-${timestamp.toString().slice(-8)}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
     const verificationCode = generateVerificationCode();
 
     let expiryDate: Date | undefined;
@@ -63,6 +98,7 @@ export async function POST(request: NextRequest) {
       verificationCode,
       issueDate,
       expiryDate,
+      photoUrl,
       html: renderDocumentHtml({
         fullName: targetUser.fullName || targetUser.username || targetUser.email,
         type: documentType as "bulletin" | "passport" | "certificate" | "visitor_certificate",
@@ -72,6 +108,15 @@ export async function POST(request: NextRequest) {
         expiryDate,
         verificationCode,
         userId: targetUser.id,
+        photoUrl,
+        birthDate: birthDate ? new Date(birthDate) : undefined,
+        birthPlace,
+        cnp,
+        address,
+        nationality,
+        sex,
+        height,
+        eyeColor,
       }),
       price: 0, // Free grant from admin
       status: "active",

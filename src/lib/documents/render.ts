@@ -15,6 +15,14 @@ export function renderDocumentHtml(params: {
   verificationCode?: string;
   photoUrl?: string;
   userId?: string;
+  birthDate?: Date;
+  birthPlace?: string;
+  cnp?: string;
+  address?: string;
+  nationality?: string;
+  sex?: string;
+  height?: string;
+  eyeColor?: string;
 }) {
   const format = (date: Date) =>
     new Intl.DateTimeFormat("ro-RO", { year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
@@ -48,6 +56,14 @@ function renderBulletin(
     verificationCode?: string;
     photoUrl?: string;
     userId?: string;
+    birthDate?: Date;
+    birthPlace?: string;
+    cnp?: string;
+    address?: string;
+    nationality?: string;
+    sex?: string;
+    height?: string;
+    eyeColor?: string;
   },
   format: (date: Date) => string,
   initials: string
@@ -158,6 +174,10 @@ function renderBulletin(
             <div class="card-meta">
               <div><div class="meta-label">ID Intern</div><div class="meta-value">${params.documentNumber}</div></div>
               <div><div class="meta-label">Rang</div><div class="meta-value"><span class="badge">Citizen</span></div></div>
+              ${params.birthDate ? `<div><div class="meta-label">Născut</div><div class="meta-value">${format(params.birthDate)}</div></div>` : ''}
+              ${params.cnp ? `<div><div class="meta-label">CNP</div><div class="meta-value">${params.cnp}</div></div>` : ''}
+              ${params.sex ? `<div><div class="meta-label">Sex</div><div class="meta-value">${params.sex === 'M' ? 'Masculin' : 'Feminin'}</div></div>` : ''}
+              ${params.nationality ? `<div><div class="meta-label">Cetățenie</div><div class="meta-value">${params.nationality}</div></div>` : ''}
               <div><div class="meta-label">Emis</div><div class="meta-value">${format(params.issueDate)}</div></div>
               <div><div class="meta-label">Expiră</div><div class="meta-value">${params.expiryDate ? format(params.expiryDate) : "—"}</div></div>
             </div>
@@ -219,6 +239,14 @@ function renderPassport(
     expiryDate?: Date;
     verificationCode?: string;
     photoUrl?: string;
+    birthDate?: Date;
+    birthPlace?: string;
+    cnp?: string;
+    address?: string;
+    nationality?: string;
+    sex?: string;
+    height?: string;
+    eyeColor?: string;
   },
   format: (date: Date) => string,
   initials: string
@@ -340,6 +368,12 @@ function renderPassport(
                 <div class="passport-fields">
                   <div class="field"><span class="field-label">Tip</span><span class="field-value">PASSPORT</span></div>
                   <div class="field"><span class="field-label">Nr. Document</span><span class="field-value">${params.documentNumber}</span></div>
+                  ${params.birthDate ? `<div class="field"><span class="field-label">Data Nașterii</span><span class="field-value">${format(params.birthDate)}</span></div>` : ''}
+                  ${params.birthPlace ? `<div class="field"><span class="field-label">Locul Nașterii</span><span class="field-value">${params.birthPlace}</span></div>` : ''}
+                  ${params.sex ? `<div class="field"><span class="field-label">Sex</span><span class="field-value">${params.sex === 'M' ? 'M' : 'F'}</span></div>` : ''}
+                  ${params.nationality ? `<div class="field"><span class="field-label">Cetățenie</span><span class="field-value">${params.nationality}</span></div>` : ''}
+                  ${params.height ? `<div class="field"><span class="field-label">Înălțime</span><span class="field-value">${params.height} cm</span></div>` : ''}
+                  ${params.eyeColor ? `<div class="field"><span class="field-label">Culoare Ochi</span><span class="field-value">${params.eyeColor}</span></div>` : ''}
                   <div class="field"><span class="field-label">Data Emiterii</span><span class="field-value">${format(params.issueDate)}</span></div>
                   <div class="field"><span class="field-label">Data Expirării</span><span class="field-value">${params.expiryDate ? format(params.expiryDate) : "—"}</span></div>
                   <div class="field"><span class="field-label">Cod Verificare</span><span class="field-value">${params.verificationCode || "N/A"}</span></div>
@@ -430,6 +464,14 @@ function renderVisitorCertificate(
     expiryDate?: Date;
     verificationCode?: string;
     photoUrl?: string;
+    birthDate?: Date;
+    birthPlace?: string;
+    cnp?: string;
+    address?: string;
+    nationality?: string;
+    sex?: string;
+    height?: string;
+    eyeColor?: string;
   },
   format: (date: Date) => string,
   initials: string
