@@ -126,15 +126,15 @@ export default function WalletPanel() {
         return;
       }
 
-      // Bank transfer flow: show deposit address
+      // Bank transfer flow: show HD deposit address
       if (paymentMethod === "bank") {
-        const res = await fetch("/api/deposit-address", {
+        const res = await fetch("/api/deposit-address-hd", {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
         if (data.success) {
           setDepositAddress(data.data.depositAddress);
-          setDepositInstructions(data.data.instructions.ro);
+          setDepositInstructions(data.data.instructions);
           setDepositQR(data.data.qrCodeUrl);
           setShowTopup(false);
           setShowBankTransferModal(true);

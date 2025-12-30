@@ -5,6 +5,7 @@ export type AuditEventType =
   | "wallet_topup_stripe_completed"
   | "wallet_topup_metamask_completed"
   | "wallet_deduct"
+  | "wallet_batch_sweep"
   | "chat_report_created"
   | "verification_submitted"
   | "verification_decided"

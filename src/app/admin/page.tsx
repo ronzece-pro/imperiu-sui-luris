@@ -18,6 +18,7 @@ import AdminEmailSettings from "@/components/admin/EmailSettings";
 import AdminAboutPageSettings from "@/components/admin/AboutPageSettings";
 import AdminVerifyDocuments from "@/components/admin/VerifyDocuments";
 import AdminPaymentSettings from "@/components/admin/PaymentSettings";
+import AdminSweepDeposits from "@/components/admin/SweepDeposits";
 
 interface AdminStats {
   totalUsers: number;
@@ -59,6 +60,7 @@ export default function AdminDashboard() {
     { id: "verifications", label: "Verificări", icon: "✅", badge: pendingVerifications },
     { id: "audit", label: "Audit", icon: "🧾" },
     { id: "payments", label: "Plăți", icon: "💳" },
+    { id: "sweep", label: "Sweep HD", icon: "💰" },
     { id: "email", label: "Email", icon: "✉️" },
     { id: "luris", label: "Luris Points", icon: "💎" },
     { id: "about", label: "Despre", icon: "ℹ️" },
@@ -414,6 +416,14 @@ export default function AdminDashboard() {
             <div className="p-4 sm:p-8">
               <h2 className="text-3xl font-bold mb-6">Gestionare Plăți</h2>
               <AdminPaymentSettings />
+            </div>
+          )}
+
+          {/* Sweep HD Tab */}
+          {activeTab === "sweep" && (
+            <div className="p-4 sm:p-8">
+              <h2 className="text-3xl font-bold mb-6">Sweep HD Wallet</h2>
+              <AdminSweepDeposits />
             </div>
           )}
 
