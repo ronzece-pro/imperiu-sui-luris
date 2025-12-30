@@ -33,11 +33,37 @@ export default function WalletPanel() {
 
   const [showTopup, setShowTopup] = useState(false);
   const [topupAmount, setTopupAmount] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "metamask">("stripe");
+  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "metamask" | "bank">("metamask");
+  const [stripeEnabled, setStripeEnabled] = useState(true);
+  const [bankTransferEnabled, setBankTransferEnabled] = useState(true);
+  const [showBankTransferModal, setShowBankTransferModal] = useState(false);
+  const [depositAddress, setDepositAddress] = useState("");
+  const [depositInstructions, setDepositInstructions] = useState("");
+  const [depositQR, setDepositQR] = useState("");
 
   const loadWallet = async () => {
     const token = localStorage.getItem("token");
     if (!token) return;
+
+    // Load payment settings
+    try {
+      const settingsRes = await fetch("/api/admin/payment-settings", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const settingsData = await settingsRes.json();
+      if (settingsData.success) {
+        const stripeActive = settingsData.data.stripe.adminToggle && settingsData.data.stripe.configured;
+        setStripeEnabled(stripeActive);
+        setBankTransferEnabled(settingsData.data.bankTransfer.enabled);
+        
+        // If current method is disabled, switch to first available
+        if (paymentMethod === "stripe" && !stripeActive) {
+          setPaymentMethod("metamask");
+        }
+      }
+    } catch (error) {
+      console.error("Error loading payment settings:", error);
+    }
 
     const res = await fetch("/api/wallet", {
       headers: { Authorization: `Bearer ${token}` },
@@ -98,6 +124,25 @@ export default function WalletPanel() {
       if (!token) {
         alert("Te rog autentifică-te întâi");
         return;
+      }
+
+      // Bank transfer flow: show deposit address
+      if (paymentMethod === "bank") {
+        const res = await fetch("/api/deposit-address", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (data.success) {
+          setDepositAddress(data.data.depositAddress);
+          setDepositInstructions(data.data.instructions.ro);
+          setDepositQR(data.data.qrCodeUrl);
+          setShowTopup(false);
+          setShowBankTransferModal(true);
+          return;
+        } else {
+          alert(`Eroare: ${data.error}`);
+          return;
+        }
       }
 
       if (paymentMethod === "stripe") {
@@ -278,20 +323,22 @@ export default function WalletPanel() {
               <div>
                 <label className="block text-sm font-medium mb-2">Metodă Plată</label>
                 <div className="space-y-2">
-                  <label className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-700 transition">
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="stripe"
-                      checked={paymentMethod === "stripe"}
-                      onChange={(e) => setPaymentMethod(e.target.value as "stripe" | "metamask")}
-                      className="accent-blue-600"
-                    />
-                    <div>
-                      <p className="font-medium">💳 Stripe</p>
-                      <p className="text-xs text-gray-400">Card de credit/debit</p>
-                    </div>
-                  </label>
+                  {stripeEnabled && (
+                    <label className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-700 transition">
+                      <input
+                        type="radio"
+                        name="payment"
+                        value="stripe"
+                        checked={paymentMethod === "stripe"}
+                        onChange={(e) => setPaymentMethod(e.target.value as "stripe" | "metamask" | "bank")}
+                        className="accent-blue-600"
+                      />
+                      <div>
+                        <p className="font-medium">💳 Stripe</p>
+                        <p className="text-xs text-gray-400">Card de credit/debit</p>
+                      </div>
+                    </label>
+                  )}
 
                   <label className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-700 transition">
                     <input
@@ -299,7 +346,7 @@ export default function WalletPanel() {
                       name="payment"
                       value="metamask"
                       checked={paymentMethod === "metamask"}
-                      onChange={(e) => setPaymentMethod(e.target.value as "stripe" | "metamask")}
+                      onChange={(e) => setPaymentMethod(e.target.value as "stripe" | "metamask" | "bank")}
                       className="accent-blue-600"
                     />
                     <div>
@@ -307,6 +354,23 @@ export default function WalletPanel() {
                       <p className="text-xs text-gray-400">Plată cu criptomonede</p>
                     </div>
                   </label>
+
+                  {bankTransferEnabled && (
+                    <label className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-700 transition">
+                      <input
+                        type="radio"
+                        name="payment"
+                        value="bank"
+                        checked={paymentMethod === "bank"}
+                        onChange={(e) => setPaymentMethod(e.target.value as "stripe" | "metamask" | "bank")}
+                        className="accent-blue-600"
+                      />
+                      <div>
+                        <p className="font-medium">🏦 Transfer Bancar / Revolut</p>
+                        <p className="text-xs text-gray-400">Transfer manual (adresă unică)</p>
+                      </div>
+                    </label>
+                  )}
                 </div>
               </div>
 
@@ -326,7 +390,106 @@ export default function WalletPanel() {
                 onClick={handleTopup}
                 className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-bold transition"
               >
-                {paymentMethod === "stripe" ? `Plătește $${topupAmount || "0.00"}` : "Plătește cu MetaMask"}
+                {paymentMethod === "stripe" 
+                  ? `Plătește $${topupAmount || "0.00"}` 
+                  : paymentMethod === "metamask"
+                  ? "Plătește cu MetaMask"
+                  : "Generează Adresă Depunere"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bank Transfer Modal */}
+      {showBankTransferModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl max-w-2xl w-full p-6 my-8">
+            <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
+              🏦 Adresa ta de Depunere Crypto
+            </h3>
+
+            <div className="space-y-6">
+              {/* QR Code */}
+              <div className="flex justify-center">
+                <div className="bg-white p-4 rounded-lg">
+                  <img 
+                    src={depositQR} 
+                    alt="QR Code" 
+                    className="w-64 h-64"
+                  />
+                </div>
+              </div>
+
+              {/* Deposit Address */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-400">
+                  Adresă Unică de Depunere
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={depositAddress}
+                    readOnly
+                    className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white font-mono text-sm focus:outline-none"
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(depositAddress);
+                      alert("✓ Adresă copiată în clipboard!");
+                    }}
+                    className="px-4 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold transition"
+                  >
+                    📋 Copiază
+                  </button>
+                </div>
+              </div>
+
+              {/* Instructions */}
+              <div className="bg-blue-900/30 border border-blue-700/50 rounded-lg p-4">
+                <h4 className="font-bold mb-2 text-blue-300">📖 Instrucțiuni</h4>
+                <div className="text-sm text-gray-300 whitespace-pre-line leading-relaxed">
+                  {depositInstructions}
+                </div>
+              </div>
+
+              {/* Warning */}
+              <div className="bg-yellow-900/30 border border-yellow-700/50 rounded-lg p-4">
+                <p className="text-sm text-yellow-300">
+                  ⚠️ <strong>Important:</strong> Această adresă este generată automat pentru contul tău. 
+                  NU trimite fonduri de pe exchange-uri centralizate. Folosește doar wallet-uri personale (MetaMask, Trust Wallet, etc.).
+                </p>
+              </div>
+
+              {/* Support Note */}
+              <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+                <p className="text-sm text-gray-400">
+                  💬 <strong>Ai nevoie de ajutor?</strong> După efectuarea transferului, 
+                  dacă fondurile nu apar în 30 de minute, contactează suportul cu hash-ul tranzacției.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowBankTransferModal(false);
+                  setDepositAddress("");
+                  setDepositInstructions("");
+                  setDepositQR("");
+                }}
+                className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition"
+              >
+                Închide
+              </button>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(depositAddress);
+                  alert("✓ Adresă copiată! Acum poți efectua transferul.");
+                }}
+                className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-bold transition"
+              >
+                📋 Copiază Adresa și Închide
               </button>
             </div>
           </div>

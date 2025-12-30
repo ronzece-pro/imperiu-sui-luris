@@ -46,6 +46,25 @@ export async function POST(request: NextRequest) {
       return errorResponse("Insufficient availability", 400);
     }
 
+    // All marketplace items are priced in LURIS
+    const totalCost = item.price * quantity;
+    
+    // Check wallet balance and deduct LURIS
+    const { deductFundsFromWallet } = await import("@/lib/wallet/persistence");
+    
+    try {
+      await deductFundsFromWallet(decoded.userId, totalCost, {
+        description: `Achiziție: ${item.name} (x${quantity})`,
+        paymentMethod: "wallet",
+      });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      if (message.includes("Insufficient")) {
+        return errorResponse(`Sold insuficient. Ai nevoie de ${totalCost} LURIS. Încarcă portofelul mai întâi.`, 402);
+      }
+      throw e;
+    }
+
     // Create transaction
     const transaction = {
       id: `trans_${Date.now()}`,
@@ -53,8 +72,8 @@ export async function POST(request: NextRequest) {
       sellerId: item.createdBy,
       itemId,
       itemType: item.type,
-      amount: item.price * quantity,
-      currency: item.currency,
+      amount: totalCost,
+      currency: "LURIS",
       status: "completed",
       createdAt: new Date(),
       updatedAt: new Date(),

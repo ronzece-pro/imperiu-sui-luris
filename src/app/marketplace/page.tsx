@@ -21,6 +21,28 @@ export default function MarketplacePage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [walletBalance, setWalletBalance] = useState(0);
+
+  useEffect(() => {
+    const fetchWallet = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      
+      try {
+        const res = await fetch("/api/wallet", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (data.success) {
+          setWalletBalance(data.data?.balance || 0);
+        }
+      } catch (error) {
+        console.error("Error fetching wallet:", error);
+      }
+    };
+
+    fetchWallet();
+  }, []);
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -49,12 +71,27 @@ export default function MarketplacePage() {
     fetchItems();
   }, [filter, search]);
 
-  const handlePurchase = async (itemId: string) => {
+  const handlePurchase = async (itemId: string, itemPrice: number, itemName: string) => {
     const token = localStorage.getItem("token");
     if (!token) {
-      alert("Please login first");
+      alert("⚠️ Te rog autentifică-te mai întâi!");
       return;
     }
+
+    // Check wallet balance
+    if (walletBalance < itemPrice) {
+      alert(`❌ Sold insuficient!\n\nAi nevoie de ${itemPrice} LURIS.\nSoldul tău actual: ${walletBalance} LURIS.\n\nÎncarcă portofelul din Dashboard → Portofel.`);
+      return;
+    }
+
+    const confirmPurchase = confirm(
+      `🛒 Confirmi achiziția?\n\n` +
+      `Produs: ${itemName}\n` +
+      `Preț: ${itemPrice} LURIS\n\n` +
+      `Sold după achiziție: ${walletBalance - itemPrice} LURIS`
+    );
+
+    if (!confirmPurchase) return;
 
     try {
       const response = await fetch("/api/marketplace", {
@@ -69,18 +106,27 @@ export default function MarketplacePage() {
       const data = await response.json();
 
       if (data.success) {
-        alert("Purchase successful!");
-        // Refresh items
+        alert(`✅ Achiziție reușită!\n\nAi cumpărat: ${itemName}\nPreț plătit: ${itemPrice} LURIS`);
+        
+        // Refresh items and wallet
         const listResponse = await fetch("/api/marketplace");
         const listData = await listResponse.json();
         if (listData.success) {
           setItems(listData.data);
         }
+
+        const walletResponse = await fetch("/api/wallet", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const walletData = await walletResponse.json();
+        if (walletData.success) {
+          setWalletBalance(walletData.data?.balance || 0);
+        }
       } else {
-        alert(data.error || "Purchase failed");
+        alert(`❌ ${data.error || "Achiziție eșuată"}`);
       }
     } catch {
-      alert("Error processing purchase");
+      alert("❌ Eroare la procesarea achiziției");
     }
   };
 
@@ -91,10 +137,26 @@ export default function MarketplacePage() {
         <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8 md:py-12">
           {/* Header */}
           <div className="mb-8 sm:mb-10 md:mb-12">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2 sm:mb-3 md:mb-4">Piața Imperiul Sui Juris</h1>
-            <p className="text-sm sm:text-base text-gray-400">
-              Cumpără documente, metale preț ioase și teren pentru a sprijini misiunea noastră
-            </p>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+              <div>
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2 sm:mb-3">
+                  Piața Imperiul Sui Juris
+                </h1>
+                <p className="text-sm sm:text-base text-gray-400">
+                  Toate produsele sunt în LURIS - moneda noastră proprie
+                </p>
+              </div>
+              <div className="bg-gradient-to-r from-cyan-600/20 to-blue-600/20 border border-cyan-500/30 rounded-xl p-4">
+                <p className="text-xs text-gray-400 mb-1">Soldul tău</p>
+                <p className="text-2xl font-bold text-cyan-400">{walletBalance} LURIS</p>
+                <a 
+                  href="/dashboard"
+                  className="text-xs text-cyan-400 hover:text-cyan-300 mt-1 inline-block"
+                >
+                  💰 Încarcă Portofel →
+                </a>
+              </div>
+            </div>
           </div>
 
           {/* Filters */}
@@ -186,20 +248,26 @@ export default function MarketplacePage() {
                         <div>
                           <p className="text-gray-400 text-xs">Preț</p>
                           <p className="text-xl sm:text-2xl font-bold text-cyan-300">
-                            {item.price}
+                            {item.price} LURIS
                           </p>
-                          <p className="text-xs text-gray-500">credite</p>
+                          {walletBalance < item.price && (
+                            <p className="text-xs text-red-400 mt-1">Sold insuficient</p>
+                          )}
                         </div>
                         <button
-                          onClick={() => handlePurchase(item.id)}
-                          disabled={item.availability === 0}
+                          onClick={() => handlePurchase(item.id, item.price, item.name)}
+                          disabled={item.availability === 0 || walletBalance < item.price}
                           className={`px-4 sm:px-5 md:px-6 py-2 font-semibold text-xs sm:text-sm rounded-lg transition whitespace-nowrap ${
-                            item.availability > 0
+                            item.availability > 0 && walletBalance >= item.price
                               ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:shadow-lg hover:shadow-blue-500/50"
                               : "bg-gray-600 text-gray-400 cursor-not-allowed"
                           }`}
                         >
-                          {item.availability > 0 ? "Cumpără" : "Stoc epuizat"}
+                          {item.availability === 0 
+                            ? "Stoc epuizat" 
+                            : walletBalance < item.price
+                            ? "Sold insuficient"
+                            : "🛒 Cumpără"}
                         </button>
                       </div>
                     </div>

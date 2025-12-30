@@ -25,11 +25,16 @@ export const adminDatabase = {
       publicKey: process.env.STRIPE_PUBLIC_KEY || "",
       secretKey: process.env.STRIPE_SECRET_KEY || "",
       enabled: !!process.env.STRIPE_PUBLIC_KEY,
+      adminToggle: true, // Admin can toggle Stripe on/off from panel
     },
     metamask: {
       walletAddress: process.env.METAMASK_WALLET || "",
       enabled: !!process.env.METAMASK_WALLET,
       networkId: 1, // Ethereum mainnet
+    },
+    bankTransfer: {
+      enabled: true, // Manual bank/Revolut transfers
+      depositAddresses: {} as Record<string, { address: string; createdAt: string; userId: string }>, // userId -> crypto address mapping
     },
     luris: {
       name: "Luris",
@@ -37,6 +42,7 @@ export const adminDatabase = {
       conversionRate: 0.1, // 1 Luris = $0.10
       minPurchase: 10,
       maxPurchase: 1000,
+      onlyLurisMarketplace: true, // All marketplace items priced in LURIS only
     },
   },
 

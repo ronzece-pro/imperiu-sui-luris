@@ -17,6 +17,7 @@ import AdminAuditLogs from "@/components/admin/AuditLogs";
 import AdminEmailSettings from "@/components/admin/EmailSettings";
 import AdminAboutPageSettings from "@/components/admin/AboutPageSettings";
 import AdminVerifyDocuments from "@/components/admin/VerifyDocuments";
+import AdminPaymentSettings from "@/components/admin/PaymentSettings";
 
 interface AdminStats {
   totalUsers: number;
@@ -412,16 +413,7 @@ export default function AdminDashboard() {
           {activeTab === "payments" && (
             <div className="p-4 sm:p-8">
               <h2 className="text-3xl font-bold mb-6">Gestionare Plăți</h2>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-lg font-bold mb-4">💳 Stripe</h3>
-                  <AdminStripeSettings />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold mb-4">🔗 MetaMask</h3>
-                  <AdminMetaMaskSettings />
-                </div>
-              </div>
+              <AdminPaymentSettings />
             </div>
           )}
 

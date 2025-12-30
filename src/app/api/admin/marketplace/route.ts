@@ -58,7 +58,8 @@ export async function POST(request: NextRequest) {
   const availability = typeof body.availability === "number" && Number.isFinite(body.availability) ? body.availability : NaN;
   if (!Number.isFinite(availability) || availability < 0) return errorResponse("Invalid availability", 400);
 
-  const currency = typeof body.currency === "string" && body.currency.trim() ? body.currency.trim() : "credits";
+  // All marketplace items are LURIS only
+  const currency = "LURIS";
 
   if (type === "document") {
     if (body.documentType !== "bulletin" && body.documentType !== "passport" && body.documentType !== "certificate" && body.documentType !== "visitor_certificate") {
