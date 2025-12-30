@@ -548,10 +548,10 @@ export default function ProfilePage() {
                           <div className="bg-slate-900 rounded-lg overflow-hidden border-2 border-slate-700">
                             <iframe
                               srcDoc={(doc as typeof doc & { html?: string }).html || ''}
-                              className="w-full h-[600px] bg-white"
+                              className="w-full h-[500px] bg-white"
                               title={doc.name}
                               sandbox="allow-scripts allow-same-origin"
-                              style={{ transform: 'scale(0.85)', transformOrigin: 'top center', height: '700px' }}
+                              style={{ transform: 'scale(0.75)', transformOrigin: 'top center', height: '667px' }}
                             />
                           </div>
                         </div>

@@ -5,6 +5,38 @@ export function generateVerificationCode(): string {
   return `${part()}-${part()}`;
 }
 
+/**
+ * Generate smart serial number from name and birthdate
+ * Similar to CNP (Romania) or Codice Fiscale (Italy)
+ * Format: 3 letters from name + YYMMDD + 2 random digits
+ * Example: DUM-951215-47 (Dumitrescu born 15 Dec 1995)
+ */
+export function generateSmartSerial(fullName: string, birthDate: Date, docType: DocumentKind): string {
+  // Extract 3 consonants from surname (first word)
+  const surname = fullName.split(" ")[0].toUpperCase();
+  const consonants = surname.replace(/[AEIOU\s]/g, "").slice(0, 3);
+  const nameCode = (consonants + surname.replace(/\s/g, "")).slice(0, 3).padEnd(3, "X");
+  
+  // Date format: YYMMDD
+  const year = birthDate.getFullYear().toString().slice(-2);
+  const month = (birthDate.getMonth() + 1).toString().padStart(2, "0");
+  const day = birthDate.getDate().toString().padStart(2, "0");
+  const dateCode = year + month + day;
+  
+  // Random 2-digit suffix
+  const suffix = Math.floor(10 + Math.random() * 90).toString();
+  
+  // Doc type prefix
+  const typePrefix: Record<DocumentKind, string> = {
+    bulletin: "BUL",
+    passport: "PSP",
+    certificate: "CRT",
+    visitor_certificate: "VIS",
+  };
+  
+  return `ISJ-${typePrefix[docType]}-${nameCode}${dateCode}${suffix}`;
+}
+
 export function renderDocumentHtml(params: {
   fullName: string;
   type: DocumentKind;
@@ -73,7 +105,7 @@ function renderBulletin(
     : "";
 
   const photoContent = params.photoUrl
-    ? `<img src="${params.photoUrl}" alt="Photo" style="width:100%;height:100%;object-fit:cover;" />`
+    ? `<img src="${params.photoUrl}" alt="Photo" />`
     : initials;
 
   return `<!DOCTYPE html>
@@ -124,6 +156,7 @@ function renderBulletin(
       border: 2px solid rgba(148, 163, 184, 0.3); display: flex; align-items: center; justify-content: center;
       font-family: var(--font-brand); font-size: 2.5rem; font-weight: 700; color: #7dd3fc;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); overflow: hidden; position: relative; }
+    .card-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
     
     .card-footer { margin-top: auto; padding-top: 12px; border-top: 1px solid rgba(148, 163, 184, 0.2);
       display: flex; justify-content: space-between; align-items: center; font-size: 0.65rem; }
@@ -252,7 +285,7 @@ function renderPassport(
   initials: string
 ) {
   const photoContent = params.photoUrl
-    ? `<img src="${params.photoUrl}" alt="Photo" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;" />`
+    ? `<img src="${params.photoUrl}" alt="Photo" />`
     : initials;
 
   const verifyUrl = params.verificationCode
@@ -311,6 +344,7 @@ function renderPassport(
       border: 2px solid rgba(148, 163, 184, 0.4); display: flex; align-items: center; justify-content: center;
       font-family: var(--font-brand); font-size: 3rem; font-weight: 700; color: #7dd3fc;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); overflow: hidden; position: relative; }
+    .passport-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
     
     .passport-info h3 { font-family: var(--font-brand); font-size: 1.5rem; margin: 0 0 16px 0; color: #f1f5f9; letter-spacing: 0.02em; }
     .passport-fields { display: grid; gap: 12px; }
@@ -481,7 +515,7 @@ function renderVisitorCertificate(
     : "";
 
   const photoContent = params.photoUrl
-    ? `<img src="${params.photoUrl}" alt="Photo" style="width:100%;height:100%;object-fit:cover;" />`
+    ? `<img src="${params.photoUrl}" alt="Photo" />`
     : initials;
 
   return `<!DOCTYPE html>
@@ -527,10 +561,11 @@ function renderVisitorCertificate(
       border-radius: 6px; color: #fbbf24; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.65rem; }
     
     .card-avatar { width: 100px; height: 120px; border-radius: 12px;
-      background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(217, 119, 6, 0.2));
-      border: 2px solid rgba(251, 191, 36, 0.4); display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2));
+      border: 2px solid rgba(251, 191, 36, 0.3); display: flex; align-items: center; justify-content: center;
       font-family: var(--font-brand); font-size: 2.5rem; font-weight: 700; color: #fbbf24;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); overflow: hidden; position: relative; }
+    .card-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
     
     .card-footer { margin-top: auto; padding-top: 12px; border-top: 1px solid rgba(251, 191, 36, 0.3);
       display: flex; justify-content: space-between; align-items: center; font-size: 0.65rem; }

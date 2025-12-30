@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { mockDatabase } from "@/lib/db/config";
 import { requireAuthenticatedUser } from "@/lib/auth/require";
 import { successResponse, errorResponse } from "@/lib/api/response";
-import { generateVerificationCode, renderDocumentHtml } from "@/lib/documents/render";
+import { generateVerificationCode, renderDocumentHtml, generateSmartSerial, type DocumentKind } from "@/lib/documents/render";
 import { appendAuditLog } from "@/lib/audit/persistence";
 import { createNotification } from "@/lib/notifications/persistence";
 import type { Document as ImperiuDocument, User } from "@/types";
@@ -66,15 +66,13 @@ export async function POST(request: NextRequest) {
     const timestamp = Date.now();
     const documentId = `doc_grant_${timestamp}`;
     
-    // Generate unique serial number based on document type
-    const serialPrefix: Record<string, string> = {
-      bulletin: "BUL",
-      passport: "PSP",
-      certificate: "CRT",
-      visitor_certificate: "VIS",
-    };
-    
-    const documentNumber = `ISJ-${serialPrefix[documentType]}-${timestamp.toString().slice(-8)}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    // Use birthdate for smart serial or fallback to current date
+    const serialBirthDate = birthDate ? new Date(birthDate) : new Date();
+    const documentNumber = generateSmartSerial(
+      targetUser.fullName || targetUser.username || targetUser.email,
+      serialBirthDate,
+      documentType as DocumentKind
+    );
     const verificationCode = generateVerificationCode();
 
     let expiryDate: Date | undefined;
