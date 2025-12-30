@@ -97,6 +97,15 @@ export async function POST(request: NextRequest) {
       issueDate,
       expiryDate,
       photoUrl,
+      // Save all personal data
+      birthDate: birthDate ? new Date(birthDate) : undefined,
+      birthPlace,
+      cnp,
+      address,
+      nationality,
+      sex,
+      height,
+      eyeColor,
       html: renderDocumentHtml({
         fullName: targetUser.fullName || targetUser.username || targetUser.email,
         type: documentType as "bulletin" | "passport" | "certificate" | "visitor_certificate",

@@ -16,6 +16,7 @@ import AdminVerificationRequests from "@/components/admin/VerificationRequests";
 import AdminAuditLogs from "@/components/admin/AuditLogs";
 import AdminEmailSettings from "@/components/admin/EmailSettings";
 import AdminAboutPageSettings from "@/components/admin/AboutPageSettings";
+import AdminVerifyDocuments from "@/components/admin/VerifyDocuments";
 
 interface AdminStats {
   totalUsers: number;
@@ -50,6 +51,7 @@ export default function AdminDashboard() {
     { id: "dashboard", label: "Dashboard", icon: "📊" },
     { id: "users", label: "Utilizatori", icon: "👥" },
     { id: "grant-docs", label: "Oferă Documente", icon: "🎁" },
+    { id: "verify-docs", label: "Verifică", icon: "🔍" },
     { id: "posts", label: "Postări", icon: "📝" },
     { id: "chat", label: "Moderare Chat", icon: "🛡️" },
     { id: "reports", label: "Rapoarte", icon: "🚨", badge: reportCount },
@@ -351,6 +353,13 @@ export default function AdminDashboard() {
             <div className="p-4 sm:p-8">
               <h2 className="text-3xl font-bold mb-6">Oferă Documente</h2>
               <AdminGrantDocuments />
+            </div>
+          )}
+
+          {/* Verify Documents Tab */}
+          {activeTab === "verify-docs" && (
+            <div className="p-4 sm:p-8">
+              <AdminVerifyDocuments />
             </div>
           )}
 

@@ -43,6 +43,15 @@ export interface Document {
   expiryDate?: Date;
   html?: string;
   photoUrl?: string;
+  // Personal data fields
+  birthDate?: Date;
+  birthPlace?: string;
+  cnp?: string;
+  address?: string;
+  nationality?: string;
+  sex?: string;
+  height?: string;
+  eyeColor?: string;
   status: "active" | "expired" | "revoked";
   price: number;
   createdAt: Date;
