@@ -12,12 +12,13 @@ import {
   listRoomMessages,
   validateAndNormalizeMessageInput,
 } from "@/lib/chat/persistence";
+import { isUserVerified } from "@/lib/users/verification";
 
 type MockUser = (typeof mockDatabase.users)[number];
 
 function requireVerifiedUser(userId: string) {
   const user = mockDatabase.users.find((u) => u.id === userId);
-  return Boolean((user as MockUser | undefined)?.isVerified);
+  return isUserVerified(user);
 }
 
 function enrichMessages(messages: ChatMessage[]) {
@@ -30,7 +31,7 @@ function enrichMessages(messages: ChatMessage[]) {
         ? {
             id: sender.id,
             name: sender.fullName || sender.username || sender.email,
-            isVerified: Boolean((sender as MockUser).isVerified),
+            isVerified: isUserVerified(sender),
             badge: sender.badge || "citizen",
           }
         : { id: m.senderId, name: "Unknown", isVerified: false, badge: "citizen" },

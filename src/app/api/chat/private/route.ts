@@ -14,6 +14,7 @@ import {
   listRoomMessages,
   validateAndNormalizeMessageInput,
 } from "@/lib/chat/persistence";
+import { isUserVerified } from "@/lib/users/verification";
 
 type MockUser = (typeof mockDatabase.users)[number];
 
@@ -51,7 +52,7 @@ function enrichMessages(messages: ChatMessage[]) {
         ? {
             id: sender.id,
             name: sender.fullName || sender.username || sender.email,
-            isVerified: Boolean((sender as MockUser).isVerified),
+            isVerified: isUserVerified(sender),
             badge: sender.badge || "citizen",
           }
         : { id: m.senderId, name: "Unknown", isVerified: false, badge: "citizen" },

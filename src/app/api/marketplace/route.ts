@@ -4,7 +4,7 @@ import { requireAuthenticatedUser } from "@/lib/auth/require";
 import { successResponse, errorResponse } from "@/lib/api/response";
 import { generateVerificationCode, renderDocumentHtml } from "@/lib/documents/render";
 import { appendAuditLog } from "@/lib/audit/persistence";
-import type { Document as ImperiuDocument } from "@/types";
+import type { Document as ImperiuDocument, User } from "@/types";
 
 export async function GET(request: NextRequest) {
   try {
@@ -90,24 +90,35 @@ export async function POST(request: NextRequest) {
       const documentId = `doc_${Date.now()}`;
       const documentNumber = `ISL-${Date.now().toString().slice(-6)}-${Math.random().toString(36).substring(7).toUpperCase()}`;
       const verificationCode = generateVerificationCode();
-      const expiryDate = item.documentType === "passport" ? new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000) : undefined;
+      
+      let expiryDate: Date | undefined;
+      if (item.documentType === "passport") {
+        expiryDate = new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000); // 10 years
+      } else if (item.documentType === "visitor_certificate") {
+        expiryDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000); // 3 months
+        
+        // Grant temporary verification for 3 months
+        (user as User).verifiedUntil = expiryDate;
+        user.updatedAt = new Date();
+      }
 
       const newDocument: ImperiuDocument = {
         id: documentId,
         userId: decoded.userId,
-        type: item.documentType as "bulletin" | "passport" | "certificate",
+        type: item.documentType as "bulletin" | "passport" | "certificate" | "visitor_certificate",
         documentNumber,
         verificationCode,
         issueDate,
         expiryDate,
         html: renderDocumentHtml({
           fullName: user.fullName || user.username || user.email,
-          type: item.documentType as "bulletin" | "passport" | "certificate",
+          type: item.documentType as "bulletin" | "passport" | "certificate" | "visitor_certificate",
           documentId,
           documentNumber,
           issueDate,
           expiryDate,
           verificationCode,
+          userId: user.id,
         }),
         price: item.price,
         status: "active",

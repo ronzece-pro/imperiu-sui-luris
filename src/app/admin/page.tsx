@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AdminUserManagement from "@/components/admin/UserManagement";
+import AdminGrantDocuments from "@/components/admin/GrantDocuments";
 import AdminPostManagement from "@/components/admin/PostManagement";
 import AdminStripeSettings from "@/components/admin/StripeSettings";
 import AdminMetaMaskSettings from "@/components/admin/MetaMaskSettings";
@@ -48,6 +49,7 @@ export default function AdminDashboard() {
   const navItems: AdminNavItem[] = [
     { id: "dashboard", label: "Dashboard", icon: "📊" },
     { id: "users", label: "Utilizatori", icon: "👥" },
+    { id: "grant-docs", label: "Oferă Documente", icon: "🎁" },
     { id: "posts", label: "Postări", icon: "📝" },
     { id: "chat", label: "Moderare Chat", icon: "🛡️" },
     { id: "reports", label: "Rapoarte", icon: "🚨", badge: reportCount },
@@ -341,6 +343,14 @@ export default function AdminDashboard() {
             <div className="p-4 sm:p-8">
               <h2 className="text-3xl font-bold mb-6">Gestionare Utilizatori</h2>
               <AdminUserManagement />
+            </div>
+          )}
+
+          {/* Grant Documents Tab */}
+          {activeTab === "grant-docs" && (
+            <div className="p-4 sm:p-8">
+              <h2 className="text-3xl font-bold mb-6">Oferă Documente</h2>
+              <AdminGrantDocuments />
             </div>
           )}
 

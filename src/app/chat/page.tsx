@@ -69,7 +69,7 @@ async function fileToAttachment(file: File): Promise<Omit<ChatAttachment, "id" |
 export default function ChatPage() {
   const router = useRouter();
   const [token, setToken] = useState<string>("");
-  const [me, setMe] = useState<{ id: string; isVerified: boolean } | null>(null);
+  const [me, setMe] = useState<{ id: string; isVerified: boolean; verifiedUntil?: string } | null>(null);
 
   const [mobilePane, setMobilePane] = useState<"users" | "chat">("users");
 
@@ -136,7 +136,11 @@ export default function ChatPage() {
         const res = await fetch("/api/users", { headers: { Authorization: `Bearer ${token}` } });
         const json = await res.json();
         if (json?.success) {
-          setMe({ id: json.data?.user?.id, isVerified: Boolean(json.data?.user?.isVerified) });
+          setMe({ 
+            id: json.data?.user?.id, 
+            isVerified: Boolean(json.data?.user?.isVerified),
+            verifiedUntil: json.data?.user?.verifiedUntil
+          });
         }
       } catch {
         // ignore
@@ -900,6 +904,16 @@ export default function ChatPage() {
                 {isPrivate && privateBlocked && (
                   <div className="mb-3 text-sm text-red-200">
                     Chat blocat. Nu poți trimite mesaje către acest utilizator.
+                  </div>
+                )}
+                {!isPrivate && me?.verifiedUntil && (
+                  <div className="mb-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm text-amber-200">
+                    ⏳ <strong>Verificare temporară</strong> - Accesul la chat expiră pe{" "}
+                    {new Date(me.verifiedUntil).toLocaleDateString("ro-RO", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric"
+                    })}
                   </div>
                 )}
                 {!isPrivate && !canUseGlobal && (

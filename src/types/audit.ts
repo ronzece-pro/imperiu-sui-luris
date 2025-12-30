@@ -7,7 +7,8 @@ export type AuditEventType =
   | "wallet_deduct"
   | "chat_report_created"
   | "verification_submitted"
-  | "verification_decided";
+  | "verification_decided"
+  | "admin_grant_document";
 
 export interface AuditLogEntry {
   id: string;

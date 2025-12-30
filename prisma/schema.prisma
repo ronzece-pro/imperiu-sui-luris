@@ -7,6 +7,272 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ========== USER MODELS ==========
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  username        String   @unique
+  passwordHash    String
+  fullName        String
+  country         String   @default("Romania")
+  citizenship     String   @default("pending") // pending | active | revoked
+  role            String   @default("user") // user | admin
+  badge           String   @default("citizen")
+  accountStatus   String   @default("active") // active | blocked | banned | deleted
+  isVerified      Boolean  @default(false)
+  verifiedUntil   DateTime? // Temporary verification (visitor certificate)
+  invitedByUserId String?
+  invitedByCode   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  documents       Document[]
+  landProperties  LandProperty[]
+  chatMessages    ChatMessage[]
+  chatRooms       ChatRoom[]
+  chatPublicKeys  ChatPublicKey[]
+  chatBlocks      ChatUserBlock[]
+  chatReportsFrom ChatReport[] @relation("ReporterUser")
+  chatReportsAbout ChatReport[] @relation("ReportedUser")
+  notifications   Notification[]
+  auditLogs       AuditLogEntry[]
+  verificationRequests VerificationRequest[]
+
+  @@index([email])
+  @@index([username])
+  @@index([citizenship])
+  @@index([isVerified])
+}
+
+model InviteCode {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  createdBy   String
+  maxUses     Int      @default(1)
+  usedCount   Int      @default(0)
+  expiresAt   DateTime?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@index([code])
+  @@index([createdBy])
+}
+
+// ========== DOCUMENT MODELS ==========
+model Document {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type             String   // bulletin | passport | certificate | visitor_certificate
+  documentNumber   String   @unique
+  verificationCode String?
+  issueDate        DateTime @default(now())
+  expiryDate       DateTime?
+  html             String?  @db.Text
+  photoUrl         String?
+  status           String   @default("active") // active | expired | revoked
+  price            Float    @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([userId])
+  @@index([documentNumber])
+  @@index([verificationCode])
+  @@index([status])
+}
+
+// ========== LAND PROPERTY MODELS ==========
+model LandProperty {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  location      String
+  latitude      Float
+  longitude     Float
+  areaSize      Float    // square meters
+  type          String   // agricultural | forest | water | mixed
+  resources     String[] // Array of resources
+  purchaseDate  DateTime @default(now())
+  purchasePrice Float
+  description   String   @db.Text
+  images        String[] // Array of image URLs
+  status        String   @default("active") // active | pending | sold
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+// ========== MARKETPLACE MODELS ==========
+model MarketplaceItem {
+  id            String   @id @default(cuid())
+  type          String   // document | land | resource
+  name          String
+  description   String   @db.Text
+  price         Float
+  currency      String   @default("LURIS")
+  documentType  String?  // bulletin | passport | certificate | visitor_certificate
+  metalType     String?  // silver | gold | diamond
+  quantity      Int?
+  image         String?
+  landZone      String?
+  landAreaSize  Float?
+  landType      String?  // agricultural | forest | water | mixed
+  availability  Int      @default(1)
+  createdBy     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([type])
+  @@index([createdBy])
+}
+
+// ========== CHAT MODELS ==========
+model ChatRoom {
+  id          String   @id @default(cuid())
+  type        String   // global | private
+  name        String?
+  userId1     String?
+  userId2     String?
+  user1       User?    @relation(fields: [userId1], references: [id], onDelete: Cascade)
+  lastMessage String?  @db.Text
+  lastMessageAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  messages    ChatMessage[]
+  reads       ChatRoomRead[]
+
+  @@unique([userId1, userId2])
+  @@index([type])
+  @@index([userId1])
+  @@index([userId2])
+}
+
+model ChatMessage {
+  id          String   @id @default(cuid())
+  roomId      String
+  room        ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  senderId    String
+  sender      User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  text        String?  @db.Text
+  encryptedV  Int?
+  encryptedAlgorithm String?
+  encryptedIv String?
+  encryptedCiphertext String? @db.Text
+  attachments Json?
+  createdAt   DateTime @default(now())
+
+  @@index([roomId])
+  @@index([senderId])
+  @@index([createdAt])
+}
+
+model ChatRoomRead {
+  id         String   @id @default(cuid())
+  roomId     String
+  room       ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId     String
+  lastReadAt DateTime @default(now())
+
+  @@unique([roomId, userId])
+  @@index([userId])
+}
+
+model ChatUserBlock {
+  id         String   @id @default(cuid())
+  blockerId  String
+  blockedId  String
+  blocker    User     @relation(fields: [blockerId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+}
+
+model ChatPublicKey {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  publicKey String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId])
+}
+
+model ChatReport {
+  id          String   @id @default(cuid())
+  reporterId  String
+  reportedId  String
+  reporter    User     @relation("ReporterUser", fields: [reporterId], references: [id], onDelete: Cascade)
+  reported    User     @relation("ReportedUser", fields: [reportedId], references: [id], onDelete: Cascade)
+  messageId   String?
+  reason      String
+  description String?  @db.Text
+  status      String   @default("pending") // pending | reviewed | resolved
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([reporterId])
+  @@index([reportedId])
+  @@index([status])
+}
+
+// ========== NOTIFICATION MODELS ==========
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // verification | document | land | system
+  title     String
+  message   String   @db.Text
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+// ========== AUDIT LOG MODELS ==========
+model AuditLogEntry {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action      String
+  targetType  String?
+  targetId    String?
+  details     Json?
+  ipAddress   String?
+  userAgent   String?  @db.Text
+  timestamp   DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([timestamp])
+}
+
+// ========== VERIFICATION REQUEST MODELS ==========
+model VerificationRequest {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentUrl String?
+  notes       String?  @db.Text
+  status      String   @default("pending") // pending | approved | rejected
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
 model Wallet {
   id        String             @id @default(cuid())
   userId    String             @unique

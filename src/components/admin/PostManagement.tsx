@@ -12,7 +12,7 @@ interface MarketplaceItem {
   price: number;
   currency: string;
   availability: number;
-  documentType?: "bulletin" | "passport" | "certificate";
+  documentType?: "bulletin" | "passport" | "certificate" | "visitor_certificate";
   landZone?: string;
   landAreaSize?: number;
   landType?: "agricultural" | "forest" | "water" | "mixed";
@@ -33,7 +33,7 @@ export default function AdminPostManagement() {
     description: "",
     price: 0,
     availability: 1,
-    documentType: "bulletin" as "bulletin" | "passport" | "certificate",
+    documentType: "bulletin" as "bulletin" | "passport" | "certificate" | "visitor_certificate",
     landZone: "",
     landAreaSize: 1000,
     landType: "mixed" as "agricultural" | "forest" | "water" | "mixed",
@@ -438,7 +438,7 @@ export default function AdminPostManagement() {
                     onChange={(e) =>
                       setFormData((prev) => ({
                         ...prev,
-                        documentType: e.target.value as "bulletin" | "passport" | "certificate",
+                        documentType: e.target.value as "bulletin" | "passport" | "certificate" | "visitor_certificate",
                       }))
                     }
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
@@ -446,6 +446,7 @@ export default function AdminPostManagement() {
                     <option value="bulletin">Buletin</option>
                     <option value="passport">Pașaport</option>
                     <option value="certificate">Certificat</option>
+                    <option value="visitor_certificate">Certificat Vizitator (3 luni)</option>
                   </select>
                 </div>
               )}

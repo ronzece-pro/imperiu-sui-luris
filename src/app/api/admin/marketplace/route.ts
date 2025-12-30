@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     price?: number;
     currency?: string;
     availability?: number;
-    documentType?: "bulletin" | "passport" | "certificate";
+    documentType?: "bulletin" | "passport" | "certificate" | "visitor_certificate";
     metalType?: "silver" | "gold" | "diamond";
     quantity?: number;
     landZone?: string;
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
   const currency = typeof body.currency === "string" && body.currency.trim() ? body.currency.trim() : "credits";
 
   if (type === "document") {
-    if (body.documentType !== "bulletin" && body.documentType !== "passport" && body.documentType !== "certificate") {
+    if (body.documentType !== "bulletin" && body.documentType !== "passport" && body.documentType !== "certificate" && body.documentType !== "visitor_certificate") {
       return errorResponse("Invalid documentType", 400);
     }
   }
@@ -123,7 +123,7 @@ export async function PUT(request: NextRequest) {
     description?: string;
     price?: number;
     availability?: number;
-    documentType?: "bulletin" | "passport" | "certificate";
+    documentType?: "bulletin" | "passport" | "certificate" | "visitor_certificate";
     landZone?: string;
     landAreaSize?: number;
     landType?: "agricultural" | "forest" | "water" | "mixed";
@@ -142,7 +142,7 @@ export async function PUT(request: NextRequest) {
   if (typeof body.availability === "number" && Number.isFinite(body.availability) && body.availability >= 0) item.availability = body.availability;
 
   if (item.type === "document" && body.documentType) {
-    if (body.documentType !== "bulletin" && body.documentType !== "passport" && body.documentType !== "certificate") {
+    if (body.documentType !== "bulletin" && body.documentType !== "passport" && body.documentType !== "certificate" && body.documentType !== "visitor_certificate") {
       return errorResponse("Invalid documentType", 400);
     }
     item.documentType = body.documentType;

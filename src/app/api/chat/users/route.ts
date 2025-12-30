@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { requireAuthenticatedUser } from "@/lib/auth/require";
 import { mockDatabase } from "@/lib/db/config";
 import { errorResponse, successResponse } from "@/lib/api/response";
+import { isUserVerified } from "@/lib/users/verification";
 
 type MockUser = (typeof mockDatabase.users)[number];
 
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
         username: u.username,
         badge: u.badge || "citizen",
         role: u.role || "user",
-        isVerified: Boolean((u as MockUser).isVerified),
+        isVerified: isUserVerified(u),
       }));
 
     return successResponse(users);

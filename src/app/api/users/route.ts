@@ -3,6 +3,8 @@ import { mockDatabase } from "@/lib/db/config";
 import { hashPassword } from "@/lib/auth/utils";
 import { requireAuthenticatedUser } from "@/lib/auth/require";
 import { successResponse, errorResponse, notFoundResponse } from "@/lib/api/response";
+import { isUserVerified } from "@/lib/users/verification";
+import type { User } from "@/types";
 
 type UserRow = (typeof mockDatabase.users)[number] & { isVerified?: boolean };
 
@@ -36,7 +38,8 @@ export async function GET(request: NextRequest) {
         citizenship: user.citizenship,
         role: user.role,
         badge: user.badge,
-        isVerified: Boolean((user as UserRow).isVerified),
+        isVerified: isUserVerified(user),
+        verifiedUntil: (user as User).verifiedUntil,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       },
@@ -151,7 +154,8 @@ export async function PUT(request: NextRequest) {
           citizenship: user.citizenship,
           role: user.role,
           badge: user.badge,
-          isVerified: Boolean((user as UserRow).isVerified),
+          isVerified: isUserVerified(user),
+          verifiedUntil: (user as User).verifiedUntil,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
         },

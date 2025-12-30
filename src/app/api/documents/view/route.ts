@@ -41,6 +41,8 @@ export async function GET(request: NextRequest) {
         issueDate: doc.issueDate,
         expiryDate: doc.expiryDate,
         verificationCode: typeof verificationCode === "string" ? verificationCode : "",
+        photoUrl: doc.photoUrl,
+        userId: doc.userId,
       });
       doc.updatedAt = new Date();
     }

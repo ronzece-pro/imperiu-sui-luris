@@ -17,6 +17,7 @@ export interface User {
   invitedByCode?: string;
   accountStatus?: AccountStatus;
   isVerified?: boolean;
+  verifiedUntil?: Date; // For temporary verification (visitor certificates)
   role?: UserRole;
   badge?: UserBadge;
   createdAt: Date;
@@ -35,12 +36,13 @@ export interface UserProfile extends Omit<User, "password"> {
 export interface Document {
   id: string;
   userId: string;
-  type: "bulletin" | "passport" | "certificate";
+  type: "bulletin" | "passport" | "certificate" | "visitor_certificate";
   documentNumber: string;
   verificationCode?: string;
   issueDate: Date;
   expiryDate?: Date;
   html?: string;
+  photoUrl?: string;
   status: "active" | "expired" | "revoked";
   price: number;
   createdAt: Date;
@@ -77,7 +79,7 @@ export interface MarketplaceItem {
   description: string;
   price: number;
   currency: string;
-  documentType?: "bulletin" | "passport" | "certificate";
+  documentType?: "bulletin" | "passport" | "certificate" | "visitor_certificate";
   metalType?: "silver" | "gold" | "diamond";
   quantity?: number;
   image?: string;
