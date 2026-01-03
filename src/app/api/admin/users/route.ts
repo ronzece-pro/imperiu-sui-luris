@@ -3,6 +3,7 @@ import { mockDatabase } from "@/lib/db/config";
 import { errorResponse, successResponse } from "@/lib/api/response";
 import { getBadgeLabel, isUserBadge, type UserBadge } from "@/lib/users/badges";
 import { requireAuthenticatedUser } from "@/lib/auth/require";
+import { getAllUsers, updateUser as updatePersistedUser, type PersistedUser } from "@/lib/users/persistence";
 
 type AdminUserAction = "block" | "unblock" | "ban" | "unban" | "delete";
 
@@ -32,32 +33,59 @@ export async function GET(request: NextRequest) {
   const admin = requireAdmin(request);
   if (!admin.ok) return admin.response;
 
-  const users = mockDatabase.users
-    .filter((u) => (u as UserRow).accountStatus !== "deleted")
-    .map((u) => {
-      const invitedByUserId = (u as UserRow).invitedByUserId;
-      const inviter = invitedByUserId ? mockDatabase.users.find((x) => x.id === invitedByUserId) : undefined;
-      const inviteesCount = mockDatabase.users.filter((x) => (x as UserRow).invitedByUserId === u.id).length;
-
-      return {
-        badge: (u.badge || "citizen") as UserBadge,
-        id: u.id,
-        email: u.email,
-        username: u.username,
-        fullName: u.fullName,
-        citizenship: u.citizenship,
+  // Get users from both persistence and mockDatabase, merge them
+  const persistedUsers = getAllUsers();
+  const mockUsers = mockDatabase.users;
+  
+  // Create a map to dedupe by id
+  const userMap = new Map<string, PersistedUser>();
+  
+  // Add persisted users first (they have priority)
+  for (const u of persistedUsers) {
+    if (u.accountStatus !== "deleted") {
+      userMap.set(u.id, u);
+    }
+  }
+  
+  // Add mock users that aren't already in persistence
+  for (const u of mockUsers) {
+    if (!userMap.has(u.id) && (u as UserRow).accountStatus !== "deleted") {
+      userMap.set(u.id, {
+        ...u,
         accountStatus: (u as UserRow).accountStatus || "active",
         isVerified: Boolean((u as UserRow).isVerified),
-        role: u.role || "user",
-        badgeLabel: getBadgeLabel((u.badge || "citizen") as UserBadge),
-        invitedByUserId: invitedByUserId || null,
-        invitedByName: inviter?.fullName || inviter?.username || null,
-        invitedByEmail: inviter?.email || null,
-        inviteesCount,
-        createdAt: u.createdAt,
-        updatedAt: u.updatedAt,
-      };
-    });
+        createdAt: u.createdAt instanceof Date ? u.createdAt.toISOString() : String(u.createdAt),
+        updatedAt: u.updatedAt instanceof Date ? u.updatedAt.toISOString() : String(u.updatedAt),
+      } as PersistedUser);
+    }
+  }
+
+  const allUsers = Array.from(userMap.values());
+  
+  const users = allUsers.map((u) => {
+    const invitedByUserId = u.invitedByUserId;
+    const inviter = invitedByUserId ? allUsers.find((x) => x.id === invitedByUserId) : undefined;
+    const inviteesCount = allUsers.filter((x) => x.invitedByUserId === u.id).length;
+
+    return {
+      badge: (u.badge || "citizen") as UserBadge,
+      id: u.id,
+      email: u.email,
+      username: u.username,
+      fullName: u.fullName,
+      citizenship: u.citizenship,
+      accountStatus: u.accountStatus || "active",
+      isVerified: Boolean(u.isVerified),
+      role: u.role || "user",
+      badgeLabel: getBadgeLabel((u.badge || "citizen") as UserBadge),
+      invitedByUserId: invitedByUserId || null,
+      invitedByName: inviter?.fullName || inviter?.username || null,
+      invitedByEmail: inviter?.email || null,
+      inviteesCount,
+      createdAt: u.createdAt,
+      updatedAt: u.updatedAt,
+    };
+  });
 
   return successResponse(users, "Users retrieved successfully", 200, {
     "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
@@ -74,9 +102,26 @@ export async function PUT(request: NextRequest) {
   const userId = typeof body.userId === "string" ? body.userId : "";
   if (!userId) return errorResponse("userId is required", 400);
 
-  const user = mockDatabase.users.find((u) => u.id === userId);
+  // Check both persistence and mockDatabase
+  const persistedUsers = getAllUsers();
+  let user = persistedUsers.find((u) => u.id === userId);
+  let fromMock = false;
+  
+  if (!user) {
+    const mockUser = mockDatabase.users.find((u) => u.id === userId);
+    if (mockUser) {
+      user = {
+        ...mockUser,
+        accountStatus: (mockUser as UserRow).accountStatus || "active",
+        isVerified: Boolean((mockUser as UserRow).isVerified),
+        createdAt: mockUser.createdAt instanceof Date ? mockUser.createdAt.toISOString() : String(mockUser.createdAt),
+        updatedAt: mockUser.updatedAt instanceof Date ? mockUser.updatedAt.toISOString() : String(mockUser.updatedAt),
+      } as PersistedUser;
+      fromMock = true;
+    }
+  }
+  
   if (!user) return errorResponse("User not found", 404);
-  const userRow = user as UserRow;
 
   if (user.id === "user_admin") {
     if (body.userAction !== undefined) {
@@ -84,19 +129,21 @@ export async function PUT(request: NextRequest) {
     }
   }
 
+  const updates: Partial<PersistedUser> = {};
+
   if (body.userAction !== undefined) {
     if (!isAdminUserAction(body.userAction)) {
       return errorResponse("Invalid userAction", 400);
     }
     const action = body.userAction;
     if (action === "delete") {
-      userRow.accountStatus = "deleted";
+      updates.accountStatus = "deleted";
     } else if (action === "block") {
-      userRow.accountStatus = "blocked";
+      updates.accountStatus = "blocked";
     } else if (action === "ban") {
-      userRow.accountStatus = "banned";
+      updates.accountStatus = "banned";
     } else {
-      userRow.accountStatus = "active";
+      updates.accountStatus = "active";
     }
   }
 
@@ -104,19 +151,31 @@ export async function PUT(request: NextRequest) {
     if (!isUserBadge(body.badge)) {
       return errorResponse("Invalid badge", 400);
     }
-    user.badge = body.badge;
+    updates.badge = body.badge;
   }
 
   if (body.isVerified !== undefined) {
     if (typeof body.isVerified !== "boolean") {
       return errorResponse("Invalid isVerified", 400);
     }
-    userRow.isVerified = body.isVerified;
+    updates.isVerified = body.isVerified;
   }
 
-  user.updatedAt = new Date();
+  // Apply updates
+  Object.assign(user, updates);
+  user.updatedAt = new Date().toISOString();
 
-  if (userRow.accountStatus === "deleted") {
+  // Save to persistence
+  updatePersistedUser(userId, user);
+  
+  // Also update mockDatabase for compatibility
+  const mockUser = mockDatabase.users.find((u) => u.id === userId);
+  if (mockUser) {
+    Object.assign(mockUser, updates);
+    mockUser.updatedAt = new Date();
+  }
+
+  if (user.accountStatus === "deleted") {
     return successResponse({ id: user.id, accountStatus: "deleted", updatedAt: user.updatedAt }, "User deleted");
   }
 
@@ -127,8 +186,8 @@ export async function PUT(request: NextRequest) {
       id: user.id,
       badge,
       badgeLabel: getBadgeLabel(badge),
-      accountStatus: userRow.accountStatus || "active",
-      isVerified: Boolean(userRow.isVerified),
+      accountStatus: user.accountStatus || "active",
+      isVerified: Boolean(user.isVerified),
       updatedAt: user.updatedAt,
     },
     "User updated"

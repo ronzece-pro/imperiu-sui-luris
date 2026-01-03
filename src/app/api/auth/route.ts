@@ -17,6 +17,7 @@ import { sendEmail } from "@/lib/email/sender";
 import { authLockoutTemplate } from "@/lib/email/templates";
 import { appendAuditLog } from "@/lib/audit/persistence";
 import { lookupGeoIp } from "@/lib/geoip/lookup";
+import { findUserByEmail, createUser, getAllUsers, type PersistedUser } from "@/lib/users/persistence";
 
 type UserRow = (typeof mockDatabase.users)[number] & {
   accountStatus?: string;
@@ -54,8 +55,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (body.action === "register") {
-      const existingUser = mockDatabase.users.find((u) => u.email.toLowerCase() === emailNormalized);
-      if (existingUser) {
+      // Check in persisted users first, then mockDatabase
+      const existingUserPersisted = findUserByEmail(emailNormalized);
+      const existingUserMock = mockDatabase.users.find((u) => u.email.toLowerCase() === emailNormalized);
+      if (existingUserPersisted || existingUserMock) {
         recordAuthFailure(attemptKey);
         return errorResponse("User already exists", 409);
       }
@@ -78,9 +81,10 @@ export async function POST(request: NextRequest) {
         return errorResponse(consumed.error, consumed.status);
       }
 
-      const passwordHash = hashPassword(passwordStr);
+      const passwordHashStr = hashPassword(passwordStr);
 
-      const newUser = {
+      // Create user in file-based persistence
+      const newUser = createUser({
         id: newUserId,
         email: emailNormalized,
         username:
@@ -100,12 +104,15 @@ export async function POST(request: NextRequest) {
         totalLandArea: 0,
         totalFunds: 0,
         documentCount: 0,
-        passwordHash,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+        passwordHash: passwordHashStr,
+      });
 
-      mockDatabase.users.push(newUser);
+      // Also add to mockDatabase for compatibility with other APIs
+      mockDatabase.users.push({
+        ...newUser,
+        createdAt: new Date(newUser.createdAt),
+        updatedAt: new Date(newUser.updatedAt),
+      });
 
       clearAuthFailures(attemptKey);
 
@@ -170,19 +177,32 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const user = mockDatabase.users.find((u) => u.email.toLowerCase() === emailNormalized);
+      // Check persisted users first, then mockDatabase
+      let user = findUserByEmail(emailNormalized) as PersistedUser | undefined;
+      let fromPersistence = true;
+      
+      if (!user) {
+        const mockUser = mockDatabase.users.find((u) => u.email.toLowerCase() === emailNormalized);
+        if (mockUser) {
+          user = {
+            ...mockUser,
+            createdAt: mockUser.createdAt instanceof Date ? mockUser.createdAt.toISOString() : String(mockUser.createdAt),
+            updatedAt: mockUser.updatedAt instanceof Date ? mockUser.updatedAt.toISOString() : String(mockUser.updatedAt),
+          } as PersistedUser;
+          fromPersistence = false;
+        }
+      }
+      
       if (!user) {
         recordAuthFailure(attemptKey);
         return errorResponse("Invalid email or password", 401);
       }
 
-      const userRow = user as UserRow;
+      if (user.accountStatus === "deleted") return errorResponse("Account deleted", 403);
+      if (user.accountStatus === "banned") return errorResponse("Account banned", 403);
+      if (user.accountStatus === "blocked") return errorResponse("Account blocked", 403);
 
-      if (userRow.accountStatus === "deleted") return errorResponse("Account deleted", 403);
-      if (userRow.accountStatus === "banned") return errorResponse("Account banned", 403);
-      if (userRow.accountStatus === "blocked") return errorResponse("Account blocked", 403);
-
-      const isValid = verifyPassword(passwordStr, userRow.passwordHash || "");
+      const isValid = verifyPassword(passwordStr, user.passwordHash || "");
       if (!isValid) {
         const failure = recordAuthFailure(attemptKey);
         if (failure.lockedNow && shouldSendLockoutEmail(attemptKey)) {
@@ -228,7 +248,7 @@ export async function POST(request: NextRequest) {
             createdAt: user.createdAt,
             role: user.role || "user",
             badge: user.badge || "citizen",
-            isVerified: Boolean(userRow.isVerified),
+            isVerified: Boolean(user.isVerified),
           },
           token,
         },
