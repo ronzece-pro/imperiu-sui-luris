@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Navbar from "@/components/layout/Navbar";
 
 interface HelpCategory {
   id: string;
@@ -111,9 +112,9 @@ export default function HelpPage() {
       ]);
 
       const userData = await userRes.json();
-      if (userData.success) {
+      if (userData.success && userData.data?.user) {
         setIsLoggedIn(true);
-        setIsVerified(userData.data.isVerified);
+        setIsVerified(userData.data.user.isVerified === true);
       }
 
       const statsData = await statsRes.json();
@@ -181,10 +182,12 @@ export default function HelpPage() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
+      <Navbar />
+      
       {/* Header */}
       <div className="bg-gradient-to-r from-amber-600 to-amber-800 py-12 px-4">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-4xl font-bold mb-4">🤝 Comunitatea Ajută</h1>
+          <h1 className="text-4xl font-bold mb-4">🤝 Ajutor Reciproc</h1>
           <p className="text-amber-100 text-lg mb-6">
             Aici cetățenii Imperiului se ajută între ei. Cere sau oferă ajutor, câștigă recompense!
           </p>

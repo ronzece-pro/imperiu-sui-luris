@@ -216,6 +216,11 @@ export default function Header() {
           </Link>
 
           <div className="hidden md:flex items-center space-x-4 lg:space-x-6">
+            {isLoggedIn ? (
+              <Link href="/help" className="text-gray-300 hover:text-white transition duration-200 text-xs font-semibold uppercase tracking-[0.18em]">
+                Ajutor Reciproc
+              </Link>
+            ) : null}
             <Link href="/marketplace" className="text-gray-300 hover:text-white transition duration-200 text-xs font-semibold uppercase tracking-[0.18em]">
               Piață
             </Link>
@@ -226,9 +231,6 @@ export default function Header() {
               <>
                 <Link href="/dashboard" className="text-gray-300 hover:text-white transition duration-200 text-xs font-semibold uppercase tracking-[0.18em]">
                   Dashboard
-                </Link>
-                <Link href="/help" className="text-gray-300 hover:text-white transition duration-200 text-xs font-semibold uppercase tracking-[0.18em]">
-                  Ajutor
                 </Link>
                 <Link href="/chat" className="text-gray-300 hover:text-white transition duration-200 text-xs font-semibold uppercase tracking-[0.18em]">
                   Chat
@@ -406,6 +408,15 @@ export default function Header() {
 
         {mobileMenu ? (
           <div className="md:hidden border-t border-slate-700 py-3 space-y-3">
+            {isLoggedIn ? (
+              <Link
+                href="/help"
+                className="block px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-slate-700/50 rounded"
+                onClick={() => setMobileMenu(false)}
+              >
+                🤝 Ajutor Reciproc
+              </Link>
+            ) : null}
             <Link
               href="/marketplace"
               className="block px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-slate-700/50 rounded"
@@ -428,13 +439,6 @@ export default function Header() {
                   onClick={() => setMobileMenu(false)}
                 >
                   Dashboard
-                </Link>
-                <Link
-                  href="/help"
-                  className="block px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-slate-700/50 rounded"
-                  onClick={() => setMobileMenu(false)}
-                >
-                  Ajutor Comunitar
                 </Link>
                 <Link
                   href="/chat"
