@@ -5,10 +5,12 @@ function run(cmd, args) {
   if (res.status !== 0) process.exit(res.status ?? 1);
 }
 
-const hasDb = !!process.env.DATABASE_URL;
+// Always generate Prisma client (needed for TypeScript compilation)
+run("npx", ["prisma", "generate"]);
 
+// Only run migrations if DATABASE_URL is set
+const hasDb = !!process.env.DATABASE_URL;
 if (hasDb) {
-  run("npx", ["prisma", "generate"]);
   run("npx", ["prisma", "migrate", "deploy"]);
 }
 
