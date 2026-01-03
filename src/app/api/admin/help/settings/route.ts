@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { requireAuthenticatedUser } from "@/lib/auth/require";
 import { successResponse, errorResponse } from "@/lib/api/response";
-import { getUserById } from "@/lib/users/persistence";
+import { findUserById } from "@/lib/users/persistence";
 import { getHelpSettings, saveHelpSettings } from "@/lib/help/settings";
 import { appendAuditLog } from "@/lib/audit/persistence";
 
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   const { userId } = authed.decoded;
 
   // Verify admin
-  const user = getUserById(userId);
+  const user = findUserById(userId);
   if (!user || user.role !== "admin") {
     return errorResponse("Nu ai permisiuni de administrator", 403);
   }
@@ -31,7 +31,7 @@ export async function PUT(request: NextRequest) {
   const { userId } = authed.decoded;
 
   // Verify admin
-  const user = getUserById(userId);
+  const user = findUserById(userId);
   if (!user || user.role !== "admin") {
     return errorResponse("Nu ai permisiuni de administrator", 403);
   }
