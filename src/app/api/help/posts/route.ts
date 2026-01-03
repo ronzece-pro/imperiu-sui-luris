@@ -5,9 +5,84 @@ import { appendAuditLog } from "@/lib/audit/persistence";
 import { prisma } from "@/lib/db/prisma";
 import { getHelpSettings } from "@/lib/help/settings";
 import { isUserVerified } from "@/lib/users/verification";
-import { isHardcodedCategoryId, getHardcodedCategoryById, getSlugFromHardcodedId, HARDCODED_CATEGORIES } from "@/lib/help/categories";
+import { isHardcodedCategoryId, getHardcodedCategoryById, HARDCODED_CATEGORIES } from "@/lib/help/categories";
 import { DEFAULT_HELP_CATEGORIES } from "@/types/help";
 import type { CreateHelpPostRequest, HelpPostStatus } from "@/types/help";
+
+// Ensure mock user exists in Prisma database for Help System relations
+async function ensurePrismaUser(mockUser: {
+  id: string;
+  email: string;
+  username: string;
+  fullName: string;
+  isVerified?: boolean;
+  badge?: string;
+  role?: string;
+}): Promise<void> {
+  try {
+    const existingUser = await prisma.user.findUnique({
+      where: { id: mockUser.id },
+    });
+    
+    if (!existingUser) {
+      // Try to create user - handle unique constraint conflicts
+      try {
+        await prisma.user.create({
+          data: {
+            id: mockUser.id,
+            email: mockUser.email,
+            username: mockUser.username,
+            fullName: mockUser.fullName,
+            passwordHash: "mock-user-synced", // Not used for auth
+            isVerified: mockUser.isVerified ?? false,
+            badge: mockUser.badge ?? "citizen",
+            role: mockUser.role ?? "user",
+          },
+        });
+      } catch (createError: unknown) {
+        // If email/username already exists with different ID, update instead
+        const err = createError as { code?: string };
+        if (err.code === "P2002") {
+          // Unique constraint violation - user exists with different ID
+          // Try to find by email and update
+          await prisma.user.upsert({
+            where: { email: mockUser.email },
+            update: {
+              fullName: mockUser.fullName,
+              isVerified: mockUser.isVerified ?? false,
+              badge: mockUser.badge ?? "citizen",
+            },
+            create: {
+              id: mockUser.id,
+              email: mockUser.email,
+              username: mockUser.username,
+              fullName: mockUser.fullName,
+              passwordHash: "mock-user-synced",
+              isVerified: mockUser.isVerified ?? false,
+              badge: mockUser.badge ?? "citizen",
+              role: mockUser.role ?? "user",
+            },
+          });
+        } else {
+          throw createError;
+        }
+      }
+    } else {
+      // Update user info if it changed
+      await prisma.user.update({
+        where: { id: mockUser.id },
+        data: {
+          fullName: mockUser.fullName,
+          isVerified: mockUser.isVerified ?? existingUser.isVerified,
+          badge: mockUser.badge ?? existingUser.badge,
+        },
+      });
+    }
+  } catch (error) {
+    console.error("Error syncing mock user to Prisma:", error);
+    // Don't throw - let the operation continue and fail later if needed
+  }
+}
 
 // GET /api/help/posts - List posts with filters
 export async function GET(request: NextRequest) {
@@ -152,6 +227,17 @@ export async function POST(request: NextRequest) {
     if (!isUserVerified(authed.user)) {
       return errorResponse("Doar utilizatorii verificați pot posta cereri de ajutor", 403);
     }
+
+    // Ensure mock user exists in Prisma for foreign key relations
+    await ensurePrismaUser({
+      id: userId,
+      email: authed.user.email || `${userId}@mock.local`,
+      username: authed.user.username || userId,
+      fullName: authed.user.fullName || "Utilizator",
+      isVerified: authed.user.isVerified,
+      badge: authed.user.badge,
+      role: authed.user.role,
+    });
 
     const settings = await getHelpSettings();
     
