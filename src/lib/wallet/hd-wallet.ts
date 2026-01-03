@@ -13,14 +13,53 @@ import { HDNodeWallet, Mnemonic, JsonRpcProvider, Contract, formatUnits, parseUn
 const userIndexMap = new Map<string, number>();
 let nextIndex = 0;
 
+// Check if testnet mode
+const USE_TESTNET = process.env.USE_TESTNET === "true";
+
 // USDT/USDC Contract addresses per chain
-const TOKENS = {
+const TOKENS = USE_TESTNET ? {
+  // TESTNET CONFIG - Polygon Amoy
+  polygon: {
+    usdt: "0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582", // Amoy USDT faucet token
+    usdc: "0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582", // Same for testing
+    rpc: "https://rpc-amoy.polygon.technology",
+    chainId: 80002,
+    symbol: "MATIC",
+    explorer: "https://amoy.polygonscan.com",
+    faucet: "https://faucet.polygon.technology/",
+    isTestnet: true,
+  },
+  bsc: {
+    usdt: "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd", // BSC Testnet USDT
+    usdc: "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd",
+    rpc: "https://data-seed-prebsc-1-s1.binance.org:8545",
+    chainId: 97,
+    symbol: "tBNB",
+    explorer: "https://testnet.bscscan.com",
+    faucet: "https://testnet.bnbchain.org/faucet-smart",
+    isTestnet: true,
+  },
+  ethereum: {
+    usdt: "0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0", // Sepolia USDT
+    usdc: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", // Sepolia USDC
+    rpc: "https://ethereum-sepolia-rpc.publicnode.com",
+    chainId: 11155111,
+    symbol: "SepoliaETH",
+    explorer: "https://sepolia.etherscan.io",
+    faucet: "https://sepoliafaucet.com/",
+    isTestnet: true,
+  },
+} : {
+  // MAINNET CONFIG
   polygon: {
     usdt: "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
     usdc: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
     rpc: "https://polygon-rpc.com",
     chainId: 137,
     symbol: "MATIC",
+    explorer: "https://polygonscan.com",
+    faucet: null,
+    isTestnet: false,
   },
   bsc: {
     usdt: "0x55d398326f99059fF775485246999027B3197955",
@@ -28,6 +67,9 @@ const TOKENS = {
     rpc: "https://bsc-dataseed.binance.org",
     chainId: 56,
     symbol: "BNB",
+    explorer: "https://bscscan.com",
+    faucet: null,
+    isTestnet: false,
   },
   ethereum: {
     usdt: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
@@ -35,8 +77,15 @@ const TOKENS = {
     rpc: process.env.EVM_RPC_URL || "https://eth.llamarpc.com",
     chainId: 1,
     symbol: "ETH",
+    explorer: "https://etherscan.io",
+    faucet: null,
+    isTestnet: false,
   },
 };
+
+// Export for use in other modules
+export const CHAIN_CONFIG = TOKENS;
+export const IS_TESTNET = USE_TESTNET;
 
 // ERC20 ABI minimal (doar ce avem nevoie)
 const ERC20_ABI = [
