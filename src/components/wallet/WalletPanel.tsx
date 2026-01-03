@@ -139,7 +139,9 @@ export default function WalletPanel() {
         const data = await res.json();
         if (data.success) {
           setDepositAddress(data.data.depositAddress);
-          setDepositInstructions(data.data.instructions);
+          // instructions is an object with { ro: "..." }, extract the string
+          const instructions = data.data.instructions;
+          setDepositInstructions(typeof instructions === "string" ? instructions : instructions?.ro || "");
           setDepositQR(data.data.qrCodeUrl);
           setShowTopup(false);
           setShowBankTransferModal(true);
