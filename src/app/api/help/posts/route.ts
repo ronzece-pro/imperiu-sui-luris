@@ -5,6 +5,8 @@ import { appendAuditLog } from "@/lib/audit/persistence";
 import { prisma } from "@/lib/db/prisma";
 import { getHelpSettings } from "@/lib/help/settings";
 import { isUserVerified } from "@/lib/users/verification";
+import { isHardcodedCategoryId, getHardcodedCategoryById, getSlugFromHardcodedId, HARDCODED_CATEGORIES } from "@/lib/help/categories";
+import { DEFAULT_HELP_CATEGORIES } from "@/types/help";
 import type { CreateHelpPostRequest, HelpPostStatus } from "@/types/help";
 
 // GET /api/help/posts - List posts with filters
@@ -193,11 +195,51 @@ export async function POST(request: NextRequest) {
       return errorResponse("Descrierea este obligatorie (min 20 caractere)", 400);
     }
 
-    // Get or create category
-    let finalCategoryId = categoryId;
+    // Get or create category - handle hardcoded categories
+    let finalCategoryId: string | null = null;
     
-    if (!finalCategoryId && categoryName) {
-      // Auto-create new category
+    if (categoryId) {
+      // Check if it's a hardcoded category ID (cat_transport, cat_alimente, etc)
+      if (isHardcodedCategoryId(categoryId)) {
+        const hardcodedCat = getHardcodedCategoryById(categoryId);
+        if (!hardcodedCat) {
+          return errorResponse("Categoria nu există", 400);
+        }
+        
+        // Try to find or create this category in database
+        try {
+          let dbCategory = await prisma.helpCategory.findFirst({
+            where: { slug: hardcodedCat.slug },
+          });
+          
+          if (!dbCategory) {
+            // Create the category in database from hardcoded definition
+            const defaultCat = DEFAULT_HELP_CATEGORIES.find(c => c.slug === hardcodedCat.slug);
+            dbCategory = await prisma.helpCategory.create({
+              data: {
+                name: defaultCat?.name || hardcodedCat.name,
+                slug: hardcodedCat.slug,
+                icon: defaultCat?.icon || hardcodedCat.icon,
+                color: defaultCat?.color || hardcodedCat.color,
+                description: defaultCat?.description || hardcodedCat.description,
+                isDefault: true,
+                isActive: true,
+                sortOrder: hardcodedCat.sortOrder,
+              },
+            });
+          }
+          
+          finalCategoryId = dbCategory.id;
+        } catch (dbError) {
+          console.error("Error creating category from hardcoded:", dbError);
+          return errorResponse("Eroare la crearea categoriei. Baza de date nu este disponibilă.", 500);
+        }
+      } else {
+        // Regular database category ID
+        finalCategoryId = categoryId;
+      }
+    } else if (categoryName) {
+      // Auto-create new category from user input
       const slug = categoryName
         .toLowerCase()
         .normalize("NFD")
@@ -205,99 +247,113 @@ export async function POST(request: NextRequest) {
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-|-$/g, "");
 
-      let category = await prisma.helpCategory.findFirst({
-        where: {
-          OR: [
-            { name: { equals: categoryName.trim(), mode: "insensitive" } },
-            { slug },
-          ],
-        },
-      });
-
-      if (!category) {
-        category = await prisma.helpCategory.create({
-          data: {
-            name: categoryName.trim(),
-            slug,
-            icon: "📦",
-            color: "#6B7280",
-            isDefault: false,
-            isActive: true,
-            sortOrder: 999,
+      try {
+        let category = await prisma.helpCategory.findFirst({
+          where: {
+            OR: [
+              { name: { equals: categoryName.trim(), mode: "insensitive" } },
+              { slug },
+            ],
           },
         });
 
-        appendAuditLog({
-          type: "help_category_auto_created",
-          actorUserId: userId,
-          message: `Categorie nouă auto-creată: ${categoryName}`,
-          metadata: { categoryId: category.id },
-        });
-      }
+        if (!category) {
+          category = await prisma.helpCategory.create({
+            data: {
+              name: categoryName.trim(),
+              slug,
+              icon: "📦",
+              color: "#6B7280",
+              isDefault: false,
+              isActive: true,
+              sortOrder: 999,
+            },
+          });
 
-      finalCategoryId = category.id;
+          appendAuditLog({
+            type: "help_category_auto_created",
+            actorUserId: userId,
+            message: `Categorie nouă auto-creată: ${categoryName}`,
+            metadata: { categoryId: category.id },
+          });
+        }
+
+        finalCategoryId = category.id;
+      } catch (dbError) {
+        console.error("Error creating custom category:", dbError);
+        return errorResponse("Eroare la crearea categoriei. Baza de date nu este disponibilă.", 500);
+      }
     }
 
     if (!finalCategoryId) {
       return errorResponse("Categoria este obligatorie", 400);
     }
 
-    // Verify category exists
-    const category = await prisma.helpCategory.findUnique({
-      where: { id: finalCategoryId },
-    });
+    // Verify category exists in database
+    try {
+      const category = await prisma.helpCategory.findUnique({
+        where: { id: finalCategoryId },
+      });
 
-    if (!category || !category.isActive) {
-      return errorResponse("Categoria nu există sau nu este activă", 400);
+      if (!category || !category.isActive) {
+        return errorResponse("Categoria nu există sau nu este activă", 400);
+      }
+    } catch {
+      return errorResponse("Eroare la verificarea categoriei", 500);
     }
 
     // Create post
-    const post = await prisma.helpPost.create({
-      data: {
-        authorId: userId,
-        categoryId: finalCategoryId,
-        title: title.trim(),
-        description: description.trim(),
-        images: images || [],
-        location: location?.trim() || null,
-        urgency: urgency || "normal",
-        fromLocation: fromLocation?.trim() || null,
-        toLocation: toLocation?.trim() || null,
-        vehicleType: vehicleType?.trim() || null,
-        seats: seats || null,
-        status: "open",
-        isActive: true,
-      },
-      include: {
-        author: {
-          select: {
-            id: true,
-            username: true,
-            fullName: true,
-            isVerified: true,
-            badge: true,
+    try {
+      const post = await prisma.helpPost.create({
+        data: {
+          authorId: userId,
+          categoryId: finalCategoryId,
+          title: title.trim(),
+          description: description.trim(),
+          images: images || [],
+          location: location?.trim() || null,
+          urgency: urgency || "normal",
+          fromLocation: fromLocation?.trim() || null,
+          toLocation: toLocation?.trim() || null,
+          vehicleType: vehicleType?.trim() || null,
+          seats: seats || null,
+          status: "open",
+          isActive: true,
+        },
+        include: {
+          author: {
+            select: {
+              id: true,
+              username: true,
+              fullName: true,
+              isVerified: true,
+              badge: true,
+            },
+          },
+          category: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              icon: true,
+              color: true,
+            },
           },
         },
-        category: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            icon: true,
-            color: true,
-          },
-        },
-      },
-    });
+      });
 
-    appendAuditLog({
-      type: "help_post_created",
-      actorUserId: userId,
-      message: `Postare ajutor creată: ${title}`,
-      metadata: { postId: post.id, categoryId: finalCategoryId, urgency },
-    });
+      appendAuditLog({
+        type: "help_post_created",
+        actorUserId: userId,
+        message: `Postare ajutor creată: ${title}`,
+        metadata: { postId: post.id, categoryId: finalCategoryId, urgency },
+      });
 
-    return successResponse(post, "Postarea a fost creată", 201);
+      return successResponse(post, "Postarea a fost creată", 201);
+    } catch (postError) {
+      console.error("Error creating post in database:", postError);
+      return errorResponse("Eroare la crearea postării. Baza de date nu este disponibilă.", 500);
+    }
   } catch (error) {
     console.error("Error creating help post:", error);
     return errorResponse("Eroare la crearea postării", 500);

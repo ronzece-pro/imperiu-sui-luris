@@ -4,22 +4,7 @@ import { requireAuthenticatedUser } from "@/lib/auth/require";
 import { appendAuditLog } from "@/lib/audit/persistence";
 import { prisma } from "@/lib/db/prisma";
 import { DEFAULT_HELP_CATEGORIES } from "@/types/help";
-
-// Hardcoded categories that always work (no database dependency)
-const HARDCODED_CATEGORIES = DEFAULT_HELP_CATEGORIES.map((cat, index) => ({
-  id: `cat_${cat.slug}`,
-  name: cat.name,
-  slug: cat.slug,
-  icon: cat.icon,
-  color: cat.color,
-  description: cat.description,
-  sortOrder: index,
-  isActive: true,
-  isDefault: true,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-  _count: { posts: 0 },
-}));
+import { HARDCODED_CATEGORIES } from "@/lib/help/categories";
 
 // GET /api/help/categories - List all categories
 export async function GET(request: NextRequest) {

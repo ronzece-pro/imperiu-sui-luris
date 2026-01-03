@@ -61,7 +61,8 @@ export default function HelpPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
-  const [showNewPostModal, setShowNewPostModal] = useState(false);
+  const [showOfferModal, setShowOfferModal] = useState(false);
+  const [showRequestModal, setShowRequestModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [urgencyFilter, setUrgencyFilter] = useState<string>("");
 
@@ -218,32 +219,42 @@ export default function HelpPage() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Categories Grid */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
             <h2 className="text-2xl font-semibold">Categorii de Ajutor</h2>
-            {isLoggedIn && isVerified && (
-              <button
-                onClick={() => setShowNewPostModal(true)}
-                className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
-              >
-                <span>➕</span> Cere Ajutor
-              </button>
-            )}
-            {isLoggedIn && !isVerified && (
-              <Link
-                href="/verification"
-                className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
-              >
-                🔒 Verifică-te pentru a posta
-              </Link>
-            )}
-            {!isLoggedIn && (
-              <Link
-                href="/auth/login"
-                className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
-              >
-                Conectează-te
-              </Link>
-            )}
+            <div className="flex gap-3">
+              {isLoggedIn && isVerified && (
+                <>
+                  <button
+                    onClick={() => setShowOfferModal(true)}
+                    className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                  >
+                    <span>🤝</span> Oferă Ajutor
+                  </button>
+                  <button
+                    onClick={() => setShowRequestModal(true)}
+                    className="bg-amber-600 hover:bg-amber-700 text-white px-5 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                  >
+                    <span>🙏</span> Cere Ajutor
+                  </button>
+                </>
+              )}
+              {isLoggedIn && !isVerified && (
+                <Link
+                  href="/verification"
+                  className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+                >
+                  🔒 Verifică-te pentru a posta
+                </Link>
+              )}
+              {!isLoggedIn && (
+                <Link
+                  href="/auth/login"
+                  className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+                >
+                  Conectează-te
+                </Link>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -318,12 +329,20 @@ export default function HelpPage() {
               <div className="text-5xl mb-4">📭</div>
               <p>Nu sunt cereri de ajutor în această categorie.</p>
               {isLoggedIn && isVerified && (
-                <button
-                  onClick={() => setShowNewPostModal(true)}
-                  className="mt-4 text-amber-500 hover:text-amber-400"
-                >
-                  Fii primul care cere ajutor!
-                </button>
+                <div className="flex gap-4 justify-center mt-4">
+                  <button
+                    onClick={() => setShowOfferModal(true)}
+                    className="text-green-500 hover:text-green-400"
+                  >
+                    🤝 Oferă primul ajutor!
+                  </button>
+                  <button
+                    onClick={() => setShowRequestModal(true)}
+                    className="text-amber-500 hover:text-amber-400"
+                  >
+                    🙏 Cere ajutor!
+                  </button>
+                </div>
               )}
             </div>
           ) : (
@@ -436,14 +455,27 @@ export default function HelpPage() {
         </div>
       </div>
 
-      {/* New Post Modal */}
-      {showNewPostModal && (
-        <NewPostModal
+      {/* Offer Help Modal - uses existing categories */}
+      {showOfferModal && (
+        <OfferHelpModal
           categories={categories}
-          onClose={() => setShowNewPostModal(false)}
+          onClose={() => setShowOfferModal(false)}
           onSuccess={() => {
-            setShowNewPostModal(false);
+            setShowOfferModal(false);
             fetchPosts();
+            fetchCategories();
+          }}
+        />
+      )}
+
+      {/* Request Help Modal - allows creating new categories */}
+      {showRequestModal && (
+        <RequestHelpModal
+          onClose={() => setShowRequestModal(false)}
+          onSuccess={() => {
+            setShowRequestModal(false);
+            fetchPosts();
+            fetchCategories();
           }}
         />
       )}
@@ -451,8 +483,8 @@ export default function HelpPage() {
   );
 }
 
-// New Post Modal Component
-function NewPostModal({
+// Offer Help Modal Component - uses existing categories
+function OfferHelpModal({
   categories,
   onClose,
   onSuccess,
@@ -463,7 +495,6 @@ function NewPostModal({
 }) {
   const [formData, setFormData] = useState({
     categoryId: "",
-    newCategoryName: "",
     title: "",
     description: "",
     location: "",
@@ -483,8 +514,6 @@ function NewPostModal({
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-
-    // Convert to base64 (in production, upload to cloud storage)
     Array.from(files).forEach((file) => {
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -499,6 +528,12 @@ function NewPostModal({
     setLoading(true);
     setError("");
 
+    if (!formData.categoryId) {
+      setError("Te rugăm să selectezi o categorie");
+      setLoading(false);
+      return;
+    }
+
     try {
       const token = localStorage.getItem("token");
       const res = await fetch("/api/help/posts", {
@@ -508,8 +543,7 @@ function NewPostModal({
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          categoryId: formData.categoryId || undefined,
-          categoryName: formData.newCategoryName || undefined,
+          categoryId: formData.categoryId,
           title: formData.title,
           description: formData.description,
           images,
@@ -529,7 +563,7 @@ function NewPostModal({
         setError(data.error || "Eroare la crearea postării");
       }
     } catch {
-      setError("Eroare de conexiune");
+      setError("Eroare de conexiune. Te rugăm să încerci din nou.");
     } finally {
       setLoading(false);
     }
@@ -540,27 +574,25 @@ function NewPostModal({
       <div className="bg-gray-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold">Cere Ajutor</h2>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-white text-2xl"
-            >
-              ×
-            </button>
+            <h2 className="text-2xl font-bold">🤝 Oferă Ajutor</h2>
+            <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl">×</button>
           </div>
 
+          <p className="text-gray-400 mb-4">
+            Descrie cum poți ajuta pe alții din comunitate. Selectează o categorie existentă.
+          </p>
+
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Category Selection */}
+            {/* Category Selection - Required */}
             <div>
-              <label className="block text-sm font-medium mb-2">Categorie</label>
+              <label className="block text-sm font-medium mb-2">Categorie *</label>
               <select
                 value={formData.categoryId}
-                onChange={(e) =>
-                  setFormData({ ...formData, categoryId: e.target.value, newCategoryName: "" })
-                }
+                onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
                 className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2"
+                required
               >
-                <option value="">Selectează sau creează nouă...</option>
+                <option value="">Selectează o categorie...</option>
                 {categories.map((cat) => (
                   <option key={cat.id} value={cat.id}>
                     {cat.icon} {cat.name}
@@ -569,32 +601,14 @@ function NewPostModal({
               </select>
             </div>
 
-            {/* New Category Input */}
-            {!formData.categoryId && (
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Sau creează categorie nouă
-                </label>
-                <input
-                  type="text"
-                  value={formData.newCategoryName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, newCategoryName: e.target.value })
-                  }
-                  placeholder="ex: Ajut cu materiale de construcții"
-                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2"
-                />
-              </div>
-            )}
-
             {/* Title */}
             <div>
-              <label className="block text-sm font-medium mb-2">Titlu *</label>
+              <label className="block text-sm font-medium mb-2">Ce oferă ajutor poți oferi? *</label>
               <input
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="Ce ajutor ai nevoie?"
+                placeholder="ex: Ofer transport București - Brașov"
                 required
                 minLength={5}
                 className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2"
@@ -603,13 +617,11 @@ function NewPostModal({
 
             {/* Description */}
             <div>
-              <label className="block text-sm font-medium mb-2">Descriere *</label>
+              <label className="block text-sm font-medium mb-2">Descriere detaliată *</label>
               <textarea
                 value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-                placeholder="Descrie în detaliu ce ai nevoie..."
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Descrie în detaliu ce ajutor poți oferi, când ești disponibil, etc..."
                 required
                 minLength={20}
                 rows={4}
@@ -625,9 +637,7 @@ function NewPostModal({
                   <input
                     type="text"
                     value={formData.fromLocation}
-                    onChange={(e) =>
-                      setFormData({ ...formData, fromLocation: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, fromLocation: e.target.value })}
                     placeholder="Oraș/Localitate"
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2"
                   />
@@ -637,9 +647,7 @@ function NewPostModal({
                   <input
                     type="text"
                     value={formData.toLocation}
-                    onChange={(e) =>
-                      setFormData({ ...formData, toLocation: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, toLocation: e.target.value })}
                     placeholder="Oraș/Localitate"
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2"
                   />
@@ -649,9 +657,7 @@ function NewPostModal({
                   <input
                     type="text"
                     value={formData.vehicleType}
-                    onChange={(e) =>
-                      setFormData({ ...formData, vehicleType: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, vehicleType: e.target.value })}
                     placeholder="ex: Autoturism, Duba"
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2"
                   />
@@ -682,6 +688,200 @@ function NewPostModal({
               />
             </div>
 
+            {/* Images */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Poze (opțional)</label>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImageUpload}
+                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2"
+              />
+              {images.length > 0 && (
+                <div className="flex gap-2 mt-2 flex-wrap">
+                  {images.map((img, i) => (
+                    <div key={i} className="relative">
+                      <img src={img} alt="" className="w-20 h-20 object-cover rounded" />
+                      <button
+                        type="button"
+                        onClick={() => setImages(images.filter((_, idx) => idx !== i))}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs"
+                      >×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {error && <div className="bg-red-500/20 text-red-400 p-3 rounded-lg">{error}</div>}
+
+            <div className="flex gap-4 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 rounded-lg font-medium transition-colors"
+              >
+                Anulează
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium transition-colors disabled:opacity-50"
+              >
+                {loading ? "Se trimite..." : "Publică Oferta"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Request Help Modal Component - allows creating new categories
+function RequestHelpModal({
+  onClose,
+  onSuccess,
+}: {
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [formData, setFormData] = useState({
+    categoryName: "",
+    title: "",
+    description: "",
+    location: "",
+    urgency: "normal",
+  });
+  const [images, setImages] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImages((prev) => [...prev, reader.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    if (!formData.categoryName.trim()) {
+      setError("Te rugăm să specifici tipul de ajutor de care ai nevoie");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/help/posts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          categoryName: formData.categoryName.trim(),
+          title: formData.title,
+          description: formData.description,
+          images,
+          location: formData.location || undefined,
+          urgency: formData.urgency,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        onSuccess();
+      } else {
+        setError(data.error || "Eroare la crearea cererii");
+      }
+    } catch {
+      setError("Eroare de conexiune. Te rugăm să încerci din nou.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+      <div className="bg-gray-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold">🙏 Cere Ajutor</h2>
+            <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl">×</button>
+          </div>
+
+          <p className="text-gray-400 mb-4">
+            Descrie ce ajutor ai nevoie. O nouă categorie va fi creată automat dacă nu există deja una similară.
+          </p>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Category Name - Creates new category */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Ce tip de ajutor ai nevoie? *</label>
+              <input
+                type="text"
+                value={formData.categoryName}
+                onChange={(e) => setFormData({ ...formData, categoryName: e.target.value })}
+                placeholder="ex: Ajutor cu mutatul, Reparații electrice, Îngrijire copii..."
+                required
+                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Aceasta va crea o nouă categorie dacă nu există deja una similară
+              </p>
+            </div>
+
+            {/* Title */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Titlu cerere *</label>
+              <input
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="ex: Am nevoie de ajutor cu mutatul mobilei"
+                required
+                minLength={5}
+                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2"
+              />
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Descriere detaliată *</label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Descrie în detaliu ce ajutor ai nevoie, când, unde, etc..."
+                required
+                minLength={20}
+                rows={4}
+                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2"
+              />
+            </div>
+
+            {/* Location */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Localitatea ta</label>
+              <input
+                type="text"
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                placeholder="ex: București, Sector 3"
+                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2"
+              />
+            </div>
+
             {/* Urgency */}
             <div>
               <label className="block text-sm font-medium mb-2">Prioritate</label>
@@ -692,9 +892,7 @@ function NewPostModal({
                     name="urgency"
                     value="normal"
                     checked={formData.urgency === "normal"}
-                    onChange={(e) =>
-                      setFormData({ ...formData, urgency: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, urgency: e.target.value })}
                     className="text-amber-500"
                   />
                   🟢 Normal
@@ -705,9 +903,7 @@ function NewPostModal({
                     name="urgency"
                     value="urgent"
                     checked={formData.urgency === "urgent"}
-                    onChange={(e) =>
-                      setFormData({ ...formData, urgency: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, urgency: e.target.value })}
                     className="text-amber-500"
                   />
                   🔴 Urgent
@@ -734,18 +930,14 @@ function NewPostModal({
                         type="button"
                         onClick={() => setImages(images.filter((_, idx) => idx !== i))}
                         className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs"
-                      >
-                        ×
-                      </button>
+                      >×</button>
                     </div>
                   ))}
                 </div>
               )}
             </div>
 
-            {error && (
-              <div className="bg-red-500/20 text-red-400 p-3 rounded-lg">{error}</div>
-            )}
+            {error && <div className="bg-red-500/20 text-red-400 p-3 rounded-lg">{error}</div>}
 
             <div className="flex gap-4 pt-4">
               <button
@@ -760,7 +952,7 @@ function NewPostModal({
                 disabled={loading}
                 className="flex-1 bg-amber-600 hover:bg-amber-700 text-white py-3 rounded-lg font-medium transition-colors disabled:opacity-50"
               >
-                {loading ? "Se trimite..." : "Publică"}
+                {loading ? "Se trimite..." : "Trimite Cererea"}
               </button>
             </div>
           </form>
