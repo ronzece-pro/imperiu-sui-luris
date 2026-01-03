@@ -20,6 +20,9 @@ import AdminVerifyDocuments from "@/components/admin/VerifyDocuments";
 import AdminPaymentSettings from "@/components/admin/PaymentSettings";
 import AdminSweepDeposits from "@/components/admin/SweepDeposits";
 import AdminWalletStatus from "@/components/admin/WalletStatus";
+import AdminHelpCategories from "@/components/admin/HelpCategories";
+import AdminHelpModeration from "@/components/admin/HelpModeration";
+import AdminHelpRewardSettings from "@/components/admin/HelpRewardSettings";
 
 interface AdminStats {
   totalUsers: number;
@@ -60,6 +63,9 @@ export default function AdminDashboard() {
     { id: "reports", label: "Rapoarte", icon: "🚨", badge: reportCount },
     { id: "verifications", label: "Verificări", icon: "✅", badge: pendingVerifications },
     { id: "audit", label: "Audit", icon: "🧾" },
+    { id: "help-categories", label: "Categorii Ajutor", icon: "📁" },
+    { id: "help-moderation", label: "Moderare Ajutor", icon: "🤝" },
+    { id: "help-rewards", label: "Recompense Ajutor", icon: "🎁" },
     { id: "payments", label: "Plăți", icon: "💳" },
     { id: "wallet-status", label: "HD Wallet", icon: "🔐" },
     { id: "sweep", label: "Sweep HD", icon: "💰" },
@@ -410,6 +416,30 @@ export default function AdminDashboard() {
             <div className="p-4 sm:p-8">
               <h2 className="text-3xl font-bold mb-6">Gestionare Postări</h2>
               <AdminPostManagement />
+            </div>
+          )}
+
+          {/* Help Categories Tab */}
+          {activeTab === "help-categories" && (
+            <div className="p-4 sm:p-8">
+              <h2 className="text-3xl font-bold mb-6">Categorii Ajutor Comunitar</h2>
+              <AdminHelpCategories />
+            </div>
+          )}
+
+          {/* Help Moderation Tab */}
+          {activeTab === "help-moderation" && (
+            <div className="p-4 sm:p-8">
+              <h2 className="text-3xl font-bold mb-6">Moderare Ajutor Comunitar</h2>
+              <AdminHelpModeration />
+            </div>
+          )}
+
+          {/* Help Rewards Tab */}
+          {activeTab === "help-rewards" && (
+            <div className="p-4 sm:p-8">
+              <h2 className="text-3xl font-bold mb-6">Setări Recompense Ajutor</h2>
+              <AdminHelpRewardSettings />
             </div>
           )}
 

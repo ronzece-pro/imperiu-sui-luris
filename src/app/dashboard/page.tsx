@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
+import HelpStatsCard from "@/components/dashboard/HelpStatsCard";
 
 interface DashboardUser {
   fullName: string;
@@ -150,6 +151,11 @@ export default function DashboardPage() {
                 {userData.stats.propertyCount || 0}
               </p>
             </div>
+          </div>
+
+          {/* Help Stats Section */}
+          <div className="mb-12">
+            <HelpStatsCard />
           </div>
 
           {/* Documents Section */}

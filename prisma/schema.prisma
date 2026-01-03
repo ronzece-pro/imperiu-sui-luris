@@ -37,6 +37,17 @@ model User {
   notifications   Notification[]
   auditLogs       AuditLogEntry[]
   verificationRequests VerificationRequest[]
+  
+  // Help System relations
+  helpPosts       HelpPost[] @relation("HelpPostAuthor")
+  helpComments    HelpComment[] @relation("HelpCommentAuthor")
+  helpLikes       HelpLike[] @relation("HelpLikeUser")
+  helpOffersGiven HelpOffer[] @relation("HelpOfferHelper")
+  helpOffersReceived HelpOffer[] @relation("HelpOfferRequester")
+  helpReports     HelpReport[] @relation("HelpReportReporter")
+  helpStats       HelpStats? @relation("HelpStatsUser")
+  helpRewards     HelpReward[] @relation("HelpRewardUser")
+  helpWithdrawals HelpWithdrawal[] @relation("HelpWithdrawalUser")
 
   @@index([email])
   @@index([username])
@@ -306,4 +317,251 @@ model WalletTransaction {
   @@index([walletId])
   @@index([stripeSessionId])
   @@index([metamaskTxHash])
+}
+
+// ========== HELP SYSTEM MODELS ==========
+model HelpCategory {
+  id          String   @id @default(cuid())
+  name        String   @unique // "Transport", "Alimente", etc.
+  slug        String   @unique // "transport", "alimente", etc.
+  icon        String?  // emoji or icon name
+  description String?  @db.Text
+  color       String?  // hex color for card
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  isDefault   Boolean  @default(false) // categoriile inițiale
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  posts       HelpPost[]
+
+  @@index([slug])
+  @@index([isActive])
+}
+
+model HelpPost {
+  id          String   @id @default(cuid())
+  authorId    String
+  categoryId  String
+  category    HelpCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  title       String
+  description String   @db.Text
+  images      String[] // array of image URLs
+  location    String?  // orașul/zona
+  urgency     String   @default("normal") // normal | urgent
+  
+  // Pentru transport
+  fromLocation String?
+  toLocation   String?
+  vehicleType  String?
+  seats        Int?
+  
+  // Status
+  status      String   @default("open") // open | in_progress | completed | closed
+  isActive    Boolean  @default(true)
+  
+  // Stats
+  viewCount   Int      @default(0)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  author      User     @relation("HelpPostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  comments    HelpComment[]
+  likes       HelpLike[]
+  offers      HelpOffer[]
+  reports     HelpReport[]
+
+  @@index([authorId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([urgency])
+  @@index([location])
+  @@index([createdAt])
+}
+
+model HelpComment {
+  id        String   @id @default(cuid())
+  postId    String
+  post      HelpPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation("HelpCommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  
+  text      String   @db.Text
+  images    String[] // poze în comentarii
+  
+  parentId  String?  // pentru replies
+  parent    HelpComment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   HelpComment[] @relation("CommentReplies")
+  
+  isHidden  Boolean  @default(false) // ascuns de admin
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reports   HelpReport[]
+
+  @@index([postId])
+  @@index([authorId])
+  @@index([parentId])
+  @@index([createdAt])
+}
+
+model HelpLike {
+  id        String   @id @default(cuid())
+  postId    String
+  post      HelpPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation("HelpLikeUser", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+}
+
+model HelpOffer {
+  id          String   @id @default(cuid())
+  postId      String
+  post        HelpPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  helperId    String   // cel care oferă ajutor
+  helper      User     @relation("HelpOfferHelper", fields: [helperId], references: [id], onDelete: Cascade)
+  
+  requesterId String   // cel care cere ajutor (autorul postării)
+  requester   User     @relation("HelpOfferRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  
+  // Status flow: pending -> accepted/rejected -> confirmed/not_confirmed/cancelled
+  status      String   @default("pending") // pending | accepted | rejected | confirmed | not_confirmed | cancelled
+  
+  // Chat asociat (va fi un chatRoom dedicat)
+  chatRoomId  String?  @unique
+  
+  // Rezultat
+  helperConfirmed    Boolean? // helper zice "nu vrea ajutor" sau altele
+  requesterConfirmed Boolean? // requester zice "am fost ajutat" sau "nu am fost ajutat"
+  confirmationNote   String?  @db.Text
+  
+  // Timestamps
+  acceptedAt    DateTime?
+  confirmedAt   DateTime?
+  closedAt      DateTime?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  reports     HelpReport[]
+
+  @@index([postId])
+  @@index([helperId])
+  @@index([requesterId])
+  @@index([status])
+  @@index([chatRoomId])
+}
+
+model HelpReport {
+  id          String   @id @default(cuid())
+  reporterId  String
+  reporter    User     @relation("HelpReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  
+  // Ce se raportează (unul din acestea)
+  postId      String?
+  post        HelpPost? @relation(fields: [postId], references: [id], onDelete: Cascade)
+  commentId   String?
+  comment     HelpComment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  offerId     String?
+  offer       HelpOffer? @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  
+  reason      String   // spam | scam | inappropriate | other
+  description String?  @db.Text
+  
+  status      String   @default("pending") // pending | reviewed | resolved | dismissed
+  reviewedBy  String?
+  reviewNote  String?  @db.Text
+  reviewedAt  DateTime?
+  
+  createdAt   DateTime @default(now())
+
+  @@index([reporterId])
+  @@index([postId])
+  @@index([commentId])
+  @@index([offerId])
+  @@index([status])
+}
+
+model HelpStats {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation("HelpStatsUser", fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Statistici pentru cel care ajută
+  totalHelpsGiven      Int @default(0)
+  consecutiveHelps     Int @default(0) // pentru bonus
+  failedAttempts       Int @default(0) // puncte roșii
+  
+  // Statistici pentru cel care primește ajutor
+  totalHelpsReceived   Int @default(0)
+  
+  // Recompense
+  totalRewardsEarned   Decimal @db.Decimal(18, 2) @default(0)
+  pendingRewards       Decimal @db.Decimal(18, 2) @default(0)
+  withdrawnRewards     Decimal @db.Decimal(18, 2) @default(0)
+  
+  // Badge level
+  badgeLevel           String @default("none") // none | bronze | silver | gold | platinum
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([badgeLevel])
+}
+
+model HelpReward {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation("HelpRewardUser", fields: [userId], references: [id], onDelete: Cascade)
+  
+  type        String   // consecutive_bonus | milestone | manual_admin
+  amount      Decimal  @db.Decimal(18, 2)
+  reason      String
+  
+  // Legătură cu oferta care a generat reward-ul
+  offerId     String?
+  
+  status      String   @default("credited") // credited | withdrawn
+  withdrawnAt DateTime?
+  
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+}
+
+model HelpWithdrawal {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation("HelpWithdrawalUser", fields: [userId], references: [id], onDelete: Cascade)
+  
+  amount      Decimal  @db.Decimal(18, 2)
+  method      String   // crypto | revolut | bank_transfer
+  
+  // Detalii plată
+  walletAddress String? // pentru crypto
+  accountDetails String? @db.Text // pentru Revolut/bank (encrypted)
+  
+  status      String   @default("pending") // pending | processing | completed | rejected
+  
+  processedBy String?
+  processedAt DateTime?
+  txHash      String?  // pentru crypto
+  note        String?  @db.Text
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([method])
 }
