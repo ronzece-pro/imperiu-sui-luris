@@ -63,16 +63,16 @@ export async function PUT(request: NextRequest) {
       return errorResponse("Suma minimă de retragere nu poate fi negativă", 400);
     }
 
-    const settings = saveHelpSettings(body);
+    await saveHelpSettings(body);
 
     appendAuditLog({
       type: "help_settings_updated",
       actorUserId: userId,
       message: "Admin a actualizat setările sistemului de ajutor",
-      metadata: settings,
+      metadata: body as unknown as Record<string, unknown>,
     });
 
-    return successResponse(settings, "Setări salvate cu succes");
+    return successResponse(body, "Setări salvate cu succes");
   } catch (error) {
     console.error("Error saving settings:", error);
     return errorResponse("Eroare la salvarea setărilor", 500);
