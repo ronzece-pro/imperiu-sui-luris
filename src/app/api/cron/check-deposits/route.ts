@@ -23,29 +23,29 @@ export async function POST(request: NextRequest) {
 
     console.log("🔍 Starting deposit check...");
 
-    // Get all users from database
+    // Get all users from database (check wallets for active users)
     const { prisma } = await import("@/lib/db/prisma");
     let allUserIds: string[] = [];
     
     try {
-      const users = await prisma.user.findMany({
-        select: { id: true },
+      // Query users who have wallets (more reliable than all users)
+      const wallets = await prisma.wallet.findMany({
+        select: { userId: true },
+        distinct: ['userId'],
       });
-      allUserIds = users.map((u) => u.id);
-      console.log(`Found ${allUserIds.length} users to check`);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-      // Fallback: check users who already have wallets
-      try {
-        const wallets = await prisma.wallet.findMany({
-          select: { userId: true },
-          distinct: ['userId'],
-        });
-        allUserIds = wallets.map((w) => w.userId);
-        console.log(`Fallback: Found ${allUserIds.length} users with wallets`);
-      } catch (fallbackError) {
-        console.error("Fallback also failed:", fallbackError);
-      }
+      allUserIds = wallets.map((w) => w.userId);
+      console.log(`Found ${allUserIds.length} users with wallets to check`);
+    } catch (error: any) {
+      console.error("Error fetching users with wallets:", error.message);
+      // If DB query fails, return empty result
+      return successResponse({
+        depositsDetected: 0,
+        totalLurisCredited: 0,
+        totalUSDDeposited: 0,
+        deposits: [],
+        errors: [{ error: `Database query failed: ${error.message}` }],
+        message: "Unable to query users",
+      });
     }
 
     if (allUserIds.length === 0) {
