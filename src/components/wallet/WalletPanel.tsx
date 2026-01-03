@@ -33,9 +33,10 @@ export default function WalletPanel() {
 
   const [showTopup, setShowTopup] = useState(false);
   const [topupAmount, setTopupAmount] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "metamask" | "bank">("metamask");
-  const [stripeEnabled, setStripeEnabled] = useState(true);
-  const [bankTransferEnabled, setBankTransferEnabled] = useState(true);
+  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "metamask" | "hdwallet">("hdwallet");
+  const [stripeEnabled, setStripeEnabled] = useState(false);
+  const [metamaskEnabled, setMetamaskEnabled] = useState(false);
+  const [hdWalletEnabled, setHdWalletEnabled] = useState(true);
   const [showBankTransferModal, setShowBankTransferModal] = useState(false);
   const [depositAddress, setDepositAddress] = useState("");
   const [depositInstructions, setDepositInstructions] = useState("");
@@ -52,13 +53,17 @@ export default function WalletPanel() {
       });
       const settingsData = await settingsRes.json();
       if (settingsData.success) {
-        const stripeActive = settingsData.data.stripe.adminToggle && settingsData.data.stripe.configured;
-        setStripeEnabled(stripeActive);
-        setBankTransferEnabled(settingsData.data.bankTransfer.enabled);
+        const stripeActive = settingsData.data.stripe?.adminToggle && settingsData.data.stripe?.configured;
+        setStripeEnabled(stripeActive || false);
+        setMetamaskEnabled(settingsData.data.metamask?.enabled || false);
+        setHdWalletEnabled(settingsData.data.hdWallet?.enabled ?? true);
         
         // If current method is disabled, switch to first available
         if (paymentMethod === "stripe" && !stripeActive) {
-          setPaymentMethod("metamask");
+          setPaymentMethod(settingsData.data.hdWallet?.enabled ? "hdwallet" : "metamask");
+        }
+        if (paymentMethod === "metamask" && !settingsData.data.metamask?.enabled) {
+          setPaymentMethod(settingsData.data.hdWallet?.enabled ? "hdwallet" : "stripe");
         }
       }
     } catch (error) {
@@ -126,8 +131,8 @@ export default function WalletPanel() {
         return;
       }
 
-      // Bank transfer flow: show HD deposit address
-      if (paymentMethod === "bank") {
+      // HD Wallet flow: show HD deposit address
+      if (paymentMethod === "hdwallet") {
         const res = await fetch("/api/deposit-address-hd", {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -307,22 +312,45 @@ export default function WalletPanel() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2">
-                  {paymentMethod === "stripe" ? "Sumă (USD pentru Stripe)" : "Sumă (LURIS pentru MetaMask)"}
+                  {paymentMethod === "stripe" ? "Sumă (USD)" : paymentMethod === "hdwallet" ? "Sumă (USDT/USDC)" : "Sumă (LURIS)"}
                 </label>
                 <input
                   type="number"
                   value={topupAmount}
                   onChange={(e) => setTopupAmount(e.target.value)}
-                  placeholder={paymentMethod === "stripe" ? "100.00" : "100"}
-                  step={paymentMethod === "stripe" ? "0.01" : "1"}
+                  placeholder={paymentMethod === "stripe" ? "100.00" : paymentMethod === "hdwallet" ? "50.00" : "100"}
+                  step={paymentMethod === "metamask" ? "1" : "0.01"}
                   min="0"
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
                 />
+                {paymentMethod === "hdwallet" && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    Trimite USDT sau USDC la adresa ta unică. Creditare automată.
+                  </p>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium mb-2">Metodă Plată</label>
                 <div className="space-y-2">
+                  {hdWalletEnabled && (
+                    <label className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-700 transition border-2 border-green-500">
+                      <input
+                        type="radio"
+                        name="payment"
+                        value="hdwallet"
+                        checked={paymentMethod === "hdwallet"}
+                        onChange={(e) => setPaymentMethod(e.target.value as "stripe" | "metamask" | "hdwallet")}
+                        className="accent-green-600"
+                      />
+                      <div>
+                        <p className="font-medium">🔐 Crypto (HD Wallet)</p>
+                        <p className="text-xs text-gray-400">USDT/USDC - Polygon, BSC, Ethereum</p>
+                        <p className="text-xs text-green-400">✓ Recomandat - Comisioane minime</p>
+                      </div>
+                    </label>
+                  )}
+
                   {stripeEnabled && (
                     <label className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-700 transition">
                       <input
@@ -330,7 +358,7 @@ export default function WalletPanel() {
                         name="payment"
                         value="stripe"
                         checked={paymentMethod === "stripe"}
-                        onChange={(e) => setPaymentMethod(e.target.value as "stripe" | "metamask" | "bank")}
+                        onChange={(e) => setPaymentMethod(e.target.value as "stripe" | "metamask" | "hdwallet")}
                         className="accent-blue-600"
                       />
                       <div>
@@ -340,34 +368,19 @@ export default function WalletPanel() {
                     </label>
                   )}
 
-                  <label className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-700 transition">
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="metamask"
-                      checked={paymentMethod === "metamask"}
-                      onChange={(e) => setPaymentMethod(e.target.value as "stripe" | "metamask" | "bank")}
-                      className="accent-blue-600"
-                    />
-                    <div>
-                      <p className="font-medium">🔗 MetaMask</p>
-                      <p className="text-xs text-gray-400">Plată cu criptomonede</p>
-                    </div>
-                  </label>
-
-                  {bankTransferEnabled && (
+                  {metamaskEnabled && (
                     <label className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-700 transition">
                       <input
                         type="radio"
                         name="payment"
-                        value="bank"
-                        checked={paymentMethod === "bank"}
-                        onChange={(e) => setPaymentMethod(e.target.value as "stripe" | "metamask" | "bank")}
+                        value="metamask"
+                        checked={paymentMethod === "metamask"}
+                        onChange={(e) => setPaymentMethod(e.target.value as "stripe" | "metamask" | "hdwallet")}
                         className="accent-blue-600"
                       />
                       <div>
-                        <p className="font-medium">🏦 Transfer Bancar / Revolut</p>
-                        <p className="text-xs text-gray-400">Transfer manual (adresă unică)</p>
+                        <p className="font-medium">🔗 MetaMask</p>
+                        <p className="text-xs text-gray-400">Plată directă cu wallet</p>
                       </div>
                     </label>
                   )}
@@ -375,7 +388,7 @@ export default function WalletPanel() {
               </div>
 
               <div className="bg-blue-900 border border-blue-700 rounded-lg p-3 text-sm text-blue-200">
-                ℹ️ Comisii: Stripe 2.9% + $0.30 | MetaMask variabil pe rețea
+                ℹ️ HD Wallet: comision ~$0.05 (Polygon) | Stripe 2.9% + $0.30
               </div>
             </div>
 
@@ -394,19 +407,19 @@ export default function WalletPanel() {
                   ? `Plătește $${topupAmount || "0.00"}` 
                   : paymentMethod === "metamask"
                   ? "Plătește cu MetaMask"
-                  : "Generează Adresă Depunere"}
+                  : "Obține Adresă Depunere"}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Bank Transfer Modal */}
+      {/* HD Wallet Deposit Modal */}
       {showBankTransferModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-gray-900 border border-gray-800 rounded-xl max-w-2xl w-full p-6 my-8">
             <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
-              🏦 Adresa ta de Depunere Crypto
+              🔐 Adresa ta de Depunere Crypto
             </h3>
 
             <div className="space-y-6">
