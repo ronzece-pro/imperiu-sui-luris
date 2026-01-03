@@ -436,13 +436,15 @@ export async function POST(request: NextRequest) {
       });
 
       return successResponse(post, "Postarea a fost creată", 201);
-    } catch (postError) {
+    } catch (postError: unknown) {
       console.error("Error creating post in database:", postError);
-      return errorResponse("Eroare la crearea postării. Baza de date nu este disponibilă.", 500);
+      const errMsg = postError instanceof Error ? postError.message : String(postError);
+      return errorResponse(`Eroare la crearea postării: ${errMsg.slice(0, 200)}`, 500);
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error creating help post:", error);
-    return errorResponse("Eroare la crearea postării", 500);
+    const errMsg = error instanceof Error ? error.message : String(error);
+    return errorResponse(`Eroare la crearea postării: ${errMsg.slice(0, 200)}`, 500);
   }
 }
 
