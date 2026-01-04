@@ -74,15 +74,27 @@ export async function POST(
       );
     }
 
-    // Create a dedicated chat room for this help interaction
-    const chatRoom = await prisma.chatRoom.create({
-      data: {
-        type: "help_offer",
-        name: `Ajutor: ${post.title.substring(0, 50)}`,
-        userId1: responderId,
-        userId2: post.authorId,
+    // Find existing chat room or create new one
+    // Order userIds consistently to match the unique constraint
+    const [sortedUserId1, sortedUserId2] = [responderId, post.authorId].sort();
+    
+    let chatRoom = await prisma.chatRoom.findFirst({
+      where: {
+        userId1: sortedUserId1,
+        userId2: sortedUserId2,
       },
     });
+
+    if (!chatRoom) {
+      chatRoom = await prisma.chatRoom.create({
+        data: {
+          type: "help_offer",
+          name: `Ajutor: ${post.title.substring(0, 50)}`,
+          userId1: sortedUserId1,
+          userId2: sortedUserId2,
+        },
+      });
+    }
 
     // Create the help offer/request
     const offer = await prisma.helpOffer.create({
