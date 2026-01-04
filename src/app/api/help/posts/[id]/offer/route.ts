@@ -5,7 +5,9 @@ import { appendAuditLog } from "@/lib/audit/persistence";
 import { prisma } from "@/lib/db/prisma";
 import { isUserVerified } from "@/lib/users/verification";
 
-// POST /api/help/posts/[id]/offer - Create help offer (opens chat)
+// POST /api/help/posts/[id]/offer - Create help offer/request (opens chat)
+// For "request" posts: someone offers to help the author
+// For "offer" posts: someone requests help from the author
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -13,11 +15,11 @@ export async function POST(
   try {
     const authed = requireAuthenticatedUser(request);
     if (!authed.ok) return authed.response;
-    const { userId: helperId } = authed.decoded;
+    const { userId: responderId } = authed.decoded;
 
-    // Only verified users can offer help
+    // Only verified users can respond
     if (!isUserVerified(authed.user)) {
-      return errorResponse("Doar utilizatorii verificați pot oferi ajutor", 403);
+      return errorResponse("Doar utilizatorii verificați pot răspunde", 403);
     }
 
     const { id: postId } = await params;
@@ -35,44 +37,59 @@ export async function POST(
     }
 
     if (post.status === "completed" || post.status === "closed") {
-      return errorResponse("Această cerere de ajutor nu mai este activă", 400);
+      return errorResponse("Această cerere nu mai este activă", 400);
     }
 
-    // Can't offer help to yourself
-    if (post.authorId === helperId) {
-      return errorResponse("Nu poți oferi ajutor la propria postare", 400);
+    // Can't respond to your own post
+    if (post.authorId === responderId) {
+      return errorResponse("Nu poți răspunde la propria postare", 400);
     }
 
-    // Check if already offering help
+    // Determine roles based on postType
+    // For "request" posts: author is requester, responder is helper
+    // For "offer" posts: author is helper, responder is requester
+    const isOfferPost = post.postType === "offer";
+    const helperId = isOfferPost ? post.authorId : responderId;
+    const requesterId = isOfferPost ? responderId : post.authorId;
+
+    // Check if this responder already has an active offer/request for this post
     const existingOffer = await prisma.helpOffer.findFirst({
       where: {
         postId,
-        helperId,
+        OR: [
+          { helperId: responderId },
+          { requesterId: responderId },
+        ],
         status: { in: ["pending", "accepted"] },
       },
     });
 
     if (existingOffer) {
-      return errorResponse("Ai oferit deja ajutor pentru această cerere", 400);
+      return errorResponse(
+        isOfferPost 
+          ? "Ai solicitat deja ajutor pentru această ofertă" 
+          : "Ai oferit deja ajutor pentru această cerere", 
+        400
+      );
     }
 
-    // Create a dedicated chat room for this help offer
+    // Create a dedicated chat room for this help interaction
     const chatRoom = await prisma.chatRoom.create({
       data: {
         type: "help_offer",
         name: `Ajutor: ${post.title.substring(0, 50)}`,
-        userId1: helperId,
+        userId1: responderId,
         userId2: post.authorId,
       },
     });
 
-    // Create the help offer
+    // Create the help offer/request
     const offer = await prisma.helpOffer.create({
       data: {
         postId,
         helperId,
-        requesterId: post.authorId,
-        status: "accepted", // Auto-accept since multiple helpers are allowed
+        requesterId,
+        status: "accepted", // Auto-accept since multiple interactions are allowed
         chatRoomId: chatRoom.id,
         acceptedAt: new Date(),
       },
@@ -100,13 +117,13 @@ export async function POST(
       await prisma.chatMessage.create({
         data: {
           roomId: chatRoom.id,
-          senderId: helperId,
+          senderId: responderId,
           text: message.trim(),
         },
       });
     }
 
-    // Update post status to in_progress if it's the first offer
+    // Update post status to in_progress if it's the first response
     if (post.status === "open") {
       await prisma.helpPost.update({
         where: { id: postId },
@@ -114,36 +131,51 @@ export async function POST(
       });
     }
 
-    // Notify post author
+    // Notify post author about the response
+    const notificationTitle = isOfferPost 
+      ? "Cineva are nevoie de ajutorul tău!" 
+      : "Cineva vrea să te ajute!";
+    const notificationMessage = isOfferPost
+      ? `${authed.user?.fullName || "Un utilizator"} solicită ajutor pentru oferta ta: "${post.title}"`
+      : `${authed.user?.fullName || "Un utilizator"} oferă ajutor pentru cererea ta: "${post.title}"`;
+
     await prisma.notification.create({
       data: {
         userId: post.authorId,
         type: "help_offer",
-        title: "Cineva vrea să te ajute!",
-        message: `${authed.user?.fullName || "Un utilizator"} oferă ajutor pentru cererea ta: "${post.title}"`,
+        title: notificationTitle,
+        message: notificationMessage,
       },
     });
 
-    // Initialize or get helper stats
+    // Initialize or get stats for the helper
     await prisma.helpStats.upsert({
       where: { userId: helperId },
       update: {},
       create: { userId: helperId },
     });
 
+    const auditMessage = isOfferPost
+      ? `Solicitare de ajutor pentru oferta: ${post.title}`
+      : `Ofertă de ajutor pentru cererea: ${post.title}`;
+
     appendAuditLog({
       type: "help_offer_created",
-      actorUserId: helperId,
-      message: `Ofertă de ajutor creată pentru: ${post.title}`,
-      metadata: { postId, offerId: offer.id, chatRoomId: chatRoom.id },
+      actorUserId: responderId,
+      message: auditMessage,
+      metadata: { postId, offerId: offer.id, chatRoomId: chatRoom.id, postType: post.postType },
     });
+
+    const successMessage = isOfferPost
+      ? "Solicitarea ta a fost trimisă. Chat-ul a fost deschis."
+      : "Oferta de ajutor a fost trimisă. Chat-ul a fost deschis.";
 
     return successResponse(
       {
         offer,
         chatRoomId: chatRoom.id,
       },
-      "Oferta de ajutor a fost trimisă. Chat-ul a fost deschis.",
+      successMessage,
       201
     );
   } catch (error) {

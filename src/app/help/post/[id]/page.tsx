@@ -780,9 +780,10 @@ export default function HelpPostPage() {
         </div>
       </div>
 
-      {/* Offer Modal */}
+      {/* Offer Modal - changes based on postType */}
       {showOfferModal && (
         <OfferModal
+          postType={post.postType}
           onClose={() => setShowOfferModal(false)}
           onOffer={handleOffer}
         />
@@ -800,22 +801,30 @@ export default function HelpPostPage() {
 }
 
 function OfferModal({
+  postType,
   onClose,
   onOffer,
 }: {
+  postType: "offer" | "request";
   onClose: () => void;
   onOffer: (message: string) => void;
 }) {
   const [message, setMessage] = useState("");
 
+  // Dynamic text based on postType
+  const isOfferPost = postType === "offer";
+  const title = isOfferPost ? "🙋 Solicit Ajutor" : "🤝 Oferă Ajutor";
+  const description = isOfferPost 
+    ? "Când apeși \"Solicit\", se va deschide un chat cu persoana care oferă ajutor. Discutați detaliile și apoi confirmați că ai primit ajutorul."
+    : "Când apeși \"Oferă Ajutor\", se va deschide un chat cu persoana care are nevoie. Discutați detaliile și apoi confirmați ajutorul.";
+  const buttonText = isOfferPost ? "Solicit Ajutor" : "Oferă Ajutor";
+  const buttonColor = isOfferPost ? "bg-amber-600 hover:bg-amber-700" : "bg-green-600 hover:bg-green-700";
+
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
       <div className="bg-gray-800 rounded-xl max-w-md w-full p-6">
-        <h2 className="text-xl font-bold mb-4">🤝 Oferă Ajutor</h2>
-        <p className="text-gray-400 mb-4">
-          Când apeși "Oferă Ajutor", se va deschide un chat cu persoana care are nevoie.
-          Discutați detaliile și apoi confirmați ajutorul.
-        </p>
+        <h2 className="text-xl font-bold mb-4">{title}</h2>
+        <p className="text-gray-400 mb-4">{description}</p>
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
@@ -832,9 +841,9 @@ function OfferModal({
           </button>
           <button
             onClick={() => onOffer(message)}
-            className="flex-1 bg-green-600 hover:bg-green-700 py-2 rounded-lg"
+            className={`flex-1 ${buttonColor} py-2 rounded-lg`}
           >
-            Oferă Ajutor
+            {buttonText}
           </button>
         </div>
       </div>
