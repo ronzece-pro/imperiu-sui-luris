@@ -181,7 +181,8 @@ export async function POST(
     );
   } catch (error) {
     console.error("Error creating help offer:", error);
-    return errorResponse("Eroare la crearea ofertei de ajutor", 500);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return errorResponse(`Eroare la crearea ofertei: ${errorMessage}`, 500);
   }
 }
 
