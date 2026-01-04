@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
         type: n.type,
         title: n.title,
         body: n.message,
-        href: undefined,
+        href: n.href || undefined,
         readAt: n.isRead ? n.createdAt : null, // Use isRead flag
         createdAt: n.createdAt,
       }));

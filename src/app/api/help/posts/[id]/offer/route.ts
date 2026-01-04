@@ -146,6 +146,7 @@ export async function POST(
         type: "help_offer",
         title: notificationTitle,
         message: notificationMessage,
+        href: `/help/post/${postId}`,
       },
     });
 
