@@ -280,7 +280,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body: CreateHelpPostRequest = await request.json();
-    const { categoryId, categoryName, title, description, images, location, urgency, fromLocation, toLocation, vehicleType, seats } = body;
+    const { postType, categoryId, categoryName, title, description, images, location, urgency, fromLocation, toLocation, vehicleType, seats } = body;
+
+    // Validate postType
+    if (!postType || !["offer", "request"].includes(postType)) {
+      return errorResponse("Tipul postării este obligatoriu (offer sau request)", 400);
+    }
 
     // Validate required fields
     if (!title || title.trim().length < 5) {
@@ -331,6 +336,7 @@ export async function POST(request: NextRequest) {
           authorIsVerified: authed.user.isVerified ?? false,
           authorBadge: authed.user.badge || "citizen",
           categoryId: finalCategoryId,
+          postType: postType, // "offer" = ofer ajutor, "request" = caut ajutor
           title: title.trim(),
           description: description.trim(),
           images: images || [],
@@ -548,6 +554,7 @@ export async function POST(request: NextRequest) {
         data: {
           authorId: userId,
           categoryId: finalCategoryId,
+          postType: postType, // "offer" = ofer ajutor, "request" = caut ajutor
           title: title.trim(),
           description: description.trim(),
           images: images || [],

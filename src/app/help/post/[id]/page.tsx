@@ -11,6 +11,7 @@ interface HelpPost {
   images: string[];
   location?: string;
   urgency: string;
+  postType: "offer" | "request"; // "offer" = ofer ajutor, "request" = caut ajutor
   status: string;
   fromLocation?: string;
   toLocation?: string;
@@ -357,6 +358,13 @@ export default function HelpPostPage() {
 
   const isAuthor = currentUserId === post.author.id;
   const isHelper = activeOffer?.helper.id === currentUserId;
+  
+  // Determine who is the REQUESTER (person asking for help) vs HELPER (person offering help)
+  // For "offer" posts: author OFFERS help, responder REQUESTS help
+  // For "request" posts: author REQUESTS help, responder OFFERS help
+  const isRequester = post.postType === "offer" ? isHelper : isAuthor;
+  const isOfferingHelp = post.postType === "offer" ? isAuthor : isHelper;
+  
   const canOffer = isVerified && !isAuthor && post.status === "open" && !activeOffer;
 
   return (
@@ -514,13 +522,17 @@ export default function HelpPostPage() {
             </div>
           </div>
 
-          {/* Offer button */}
+          {/* Offer button - shows different text based on postType */}
           {canOffer && (
             <button
               onClick={() => setShowOfferModal(true)}
-              className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+              className={`w-full mt-4 ${
+                post.postType === "offer" 
+                  ? "bg-amber-600 hover:bg-amber-700" 
+                  : "bg-green-600 hover:bg-green-700"
+              } text-white py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2`}
             >
-              🤝 Pot Ajuta
+              {post.postType === "offer" ? "🙋 Am nevoie de asta" : "🤝 Pot Ajuta"}
             </button>
           )}
         </div>
@@ -588,10 +600,12 @@ export default function HelpPostPage() {
 
             {/* Confirmation Buttons */}
             <div className="border-t border-gray-700 pt-4">
-              {isAuthor ? (
+              {isRequester ? (
                 <div className="space-y-2">
                   <p className="text-sm text-gray-400 mb-2">
-                    A fost rezolvată problema ta?
+                    {post.postType === "offer" 
+                      ? "Ai primit ajutorul de care aveai nevoie?"
+                      : "A fost rezolvată problema ta?"}
                   </p>
                   <div className="flex gap-2">
                     <button
@@ -608,7 +622,7 @@ export default function HelpPostPage() {
                     </button>
                   </div>
                 </div>
-              ) : isHelper ? (
+              ) : isOfferingHelp ? (
                 <div className="space-y-2">
                   <p className="text-sm text-gray-400 mb-2">
                     Ai întâmpinat probleme?

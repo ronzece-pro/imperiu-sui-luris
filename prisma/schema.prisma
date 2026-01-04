@@ -345,6 +345,7 @@ model HelpPost {
   categoryId  String
   category    HelpCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   
+  postType    String   @default("request") // "offer" = ofer ajutor, "request" = caut ajutor
   title       String
   description String   @db.Text
   images      String[] // array of image URLs

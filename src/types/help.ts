@@ -1,5 +1,6 @@
 // Help System Types
 
+export type HelpPostType = "offer" | "request"; // offer = ofer ajutor, request = caut ajutor
 export type HelpPostUrgency = "normal" | "urgent";
 export type HelpPostStatus = "open" | "in_progress" | "completed" | "closed";
 export type HelpOfferStatus = "pending" | "accepted" | "rejected" | "confirmed" | "not_confirmed" | "cancelled";
@@ -31,6 +32,7 @@ export interface HelpPost {
   id: string;
   authorId: string;
   categoryId: string;
+  postType: HelpPostType; // "offer" = ofer ajutor, "request" = caut ajutor
   title: string;
   description: string;
   images: string[];
@@ -186,6 +188,7 @@ export interface HelpWithdrawal {
 
 // API Request/Response types
 export interface CreateHelpPostRequest {
+  postType: HelpPostType; // "offer" = ofer ajutor, "request" = caut ajutor
   categoryId?: string;
   categoryName?: string; // pentru categorii noi auto-create
   title: string;

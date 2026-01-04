@@ -31,6 +31,7 @@ export interface MockHelpPost {
   categorySlug: string;
   categoryIcon: string;
   categoryColor: string;
+  postType: "offer" | "request"; // "offer" = ofer ajutor, "request" = caut ajutor
   title: string;
   description: string;
   images: string[];
@@ -173,6 +174,7 @@ export function createMockPost(data: {
   authorIsVerified: boolean;
   authorBadge: string;
   categoryId: string;
+  postType: "offer" | "request"; // "offer" = ofer ajutor, "request" = caut ajutor
   title: string;
   description: string;
   images?: string[];
@@ -203,6 +205,7 @@ export function createMockPost(data: {
     categorySlug: category.slug,
     categoryIcon: category.icon,
     categoryColor: category.color,
+    postType: data.postType, // "offer" = ofer ajutor, "request" = caut ajutor
     title: data.title,
     description: data.description,
     images: data.images || [],

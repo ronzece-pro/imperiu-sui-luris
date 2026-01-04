@@ -22,6 +22,7 @@ interface HelpPost {
   images: string[];
   location?: string;
   urgency: "normal" | "urgent";
+  postType: "offer" | "request"; // "offer" = ofer ajutor, "request" = caut ajutor
   status: string;
   createdAt: string;
   author: {
@@ -437,15 +438,19 @@ export default function HelpPage() {
                   {isLoggedIn && isVerified && post.status === "open" && (
                     <Link
                       href={`/help/post/${post.id}?offer=true`}
-                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                      className={`${
+                        post.postType === "offer" 
+                          ? "bg-amber-600 hover:bg-amber-700" 
+                          : "bg-green-600 hover:bg-green-700"
+                      } text-white px-4 py-2 rounded-lg font-medium transition-colors`}
                     >
-                      🤝 Pot Ajuta
+                      {post.postType === "offer" ? "🙋 Am nevoie de asta" : "🤝 Pot Ajuta"}
                     </Link>
                   )}
 
                   {post._count.offers > 0 && (
                     <span className="text-amber-400 text-sm">
-                      {post._count.offers} persoană oferă ajutor
+                      {post._count.offers} {post.postType === "offer" ? "persoane interesate" : "persoane oferă ajutor"}
                     </span>
                   )}
                 </div>
@@ -543,6 +548,7 @@ function OfferHelpModal({
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
+          postType: "offer", // This modal is for OFFERING help
           categoryId: formData.categoryId,
           title: formData.title,
           description: formData.description,
@@ -790,6 +796,7 @@ function RequestHelpModal({
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
+          postType: "request", // This modal is for REQUESTING help
           categoryName: formData.categoryName.trim(),
           title: formData.title,
           description: formData.description,
