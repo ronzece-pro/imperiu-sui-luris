@@ -5,6 +5,7 @@ import { createToken, hashPassword, verifyPassword } from "@/lib/auth/utils";
 import { consumeInviteCode } from "@/lib/invites/persistence";
 import { successResponse, errorResponse } from "@/lib/api/response";
 import { getClientIp } from "@/lib/security/ip";
+import { ensureUserInDatabase } from "@/lib/db/prisma";
 import {
   authRateLimitConfig,
   checkAuthLockout,
@@ -114,6 +115,17 @@ export async function POST(request: NextRequest) {
         updatedAt: new Date(newUser.updatedAt),
       });
 
+      // Sync new user to PostgreSQL for foreign key relationships
+      await ensureUserInDatabase({
+        id: newUser.id,
+        email: newUser.email,
+        username: newUser.username,
+        fullName: newUser.fullName,
+        isVerified: false,
+        badge: "citizen",
+        role: "user",
+      });
+
       clearAuthFailures(attemptKey);
 
       const token = createToken(newUser.id, newUser.email);
@@ -145,6 +157,17 @@ export async function POST(request: NextRequest) {
         const adminUserId = "user_admin";
         const adminEmail = "admin@imperiu-sui-luris.com";
         const token = createToken(adminUserId, adminEmail);
+
+        // Sync admin to PostgreSQL
+        await ensureUserInDatabase({
+          id: adminUserId,
+          email: adminEmail,
+          username: "admin_sui",
+          fullName: "State Administrator",
+          isVerified: true,
+          badge: "president",
+          role: "admin",
+        });
 
         const geo = await lookupGeoIp(clientIp);
 
@@ -223,6 +246,17 @@ export async function POST(request: NextRequest) {
 
       clearAuthFailures(attemptKey);
       const token = createToken(user.id, user.email);
+
+      // Sync user to PostgreSQL for foreign key relationships (Help system, etc.)
+      await ensureUserInDatabase({
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        fullName: user.fullName,
+        isVerified: Boolean(user.isVerified),
+        badge: user.badge || "citizen",
+        role: user.role || "user",
+      });
 
       const geo = await lookupGeoIp(clientIp);
 
