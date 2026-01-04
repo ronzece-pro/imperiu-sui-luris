@@ -5,6 +5,7 @@ import { appendAuditLog } from "@/lib/audit/persistence";
 import { prisma } from "@/lib/db/prisma";
 import { getHelpSettings, ronToLuris } from "@/lib/help/settings";
 import { deductFundsFromWallet } from "@/lib/wallet/persistence";
+import { isUserVerified } from "@/lib/users/verification";
 import type { RequestWithdrawalRequest } from "@/types/help";
 
 // GET /api/help/rewards - Get user's rewards and stats
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
     if (!authed.ok) return authed.response;
     const { userId } = authed.decoded;
 
-    if (!authed.user?.isVerified) {
+    if (!isUserVerified(authed.user)) {
       return errorResponse("Doar utilizatorii verificați pot solicita retrageri", 403);
     }
 

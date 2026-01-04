@@ -3,6 +3,7 @@ import { successResponse, errorResponse } from "@/lib/api/response";
 import { requireAuthenticatedUser } from "@/lib/auth/require";
 import { appendAuditLog } from "@/lib/audit/persistence";
 import { prisma } from "@/lib/db/prisma";
+import { isUserVerified } from "@/lib/users/verification";
 import type { CreateHelpCommentRequest } from "@/types/help";
 
 // GET /api/help/posts/[id]/comments - Get comments for a post
@@ -56,7 +57,7 @@ export async function POST(
     const { userId } = authed.decoded;
 
     // Only verified users can comment
-    if (!authed.user?.isVerified) {
+    if (!isUserVerified(authed.user)) {
       return errorResponse("Doar utilizatorii verificați pot comenta", 403);
     }
 

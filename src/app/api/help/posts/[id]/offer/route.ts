@@ -3,6 +3,7 @@ import { successResponse, errorResponse } from "@/lib/api/response";
 import { requireAuthenticatedUser } from "@/lib/auth/require";
 import { appendAuditLog } from "@/lib/audit/persistence";
 import { prisma } from "@/lib/db/prisma";
+import { isUserVerified } from "@/lib/users/verification";
 
 // POST /api/help/posts/[id]/offer - Create help offer (opens chat)
 export async function POST(
@@ -15,7 +16,7 @@ export async function POST(
     const { userId: helperId } = authed.decoded;
 
     // Only verified users can offer help
-    if (!authed.user?.isVerified) {
+    if (!isUserVerified(authed.user)) {
       return errorResponse("Doar utilizatorii verificați pot oferi ajutor", 403);
     }
 

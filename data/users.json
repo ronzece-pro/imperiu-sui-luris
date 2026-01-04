@@ -1,0 +1,20 @@
+[
+  {
+    "id": "user_admin",
+    "email": "admin@imperiu-sui-luris.com",
+    "username": "admin",
+    "fullName": "Administrator",
+    "country": "Romania",
+    "citizenship": "active",
+    "role": "admin",
+    "badge": "owner",
+    "accountStatus": "active",
+    "isVerified": true,
+    "passwordHash": "$2a$08$izalHIa9m2bBx7EZUl31oOUjEgIvEcX54KrBATjIoT5Kpc1dSAKr.",
+    "totalLandArea": 0,
+    "totalFunds": 0,
+    "documentCount": 0,
+    "createdAt": "2025-01-01T00:00:00.000Z",
+    "updatedAt": "2026-01-04T13:22:41.726Z"
+  }
+]
