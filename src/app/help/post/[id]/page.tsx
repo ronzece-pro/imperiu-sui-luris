@@ -68,6 +68,12 @@ interface HelpOffer {
     fullName: string;
     isVerified: boolean;
   };
+  requester: {
+    id: string;
+    username: string;
+    fullName: string;
+    isVerified: boolean;
+  };
 }
 
 interface ChatMessage {
@@ -156,10 +162,10 @@ export default function HelpPostPage() {
 
   useEffect(() => {
     if (post && currentUserId) {
-      // Find active offer for current user
+      // Find active offer for current user - check both helper and requester
       const myOffer = post.offers.find(
         (o) =>
-          (o.helper.id === currentUserId || post.author.id === currentUserId) &&
+          (o.helper.id === currentUserId || o.requester?.id === currentUserId) &&
           ["accepted", "pending"].includes(o.status)
       );
       if (myOffer) {
@@ -357,14 +363,19 @@ export default function HelpPostPage() {
   }
 
   const isAuthor = currentUserId === post.author.id;
-  const isHelper = activeOffer?.helper.id === currentUserId;
   
   // Determine who is the REQUESTER (person asking for help) vs HELPER (person offering help)
-  // For "offer" posts: author OFFERS help, responder REQUESTS help
-  // For "request" posts: author REQUESTS help, responder OFFERS help
+  // Based on the activeOffer relationship, not postType
   const effectivePostType = post.postType || "request"; // Default to request for old posts
-  const isRequester = effectivePostType === "offer" ? isHelper : isAuthor;
-  const isOfferingHelp = effectivePostType === "offer" ? isAuthor : isHelper;
+  
+  // Check if current user is involved in an active offer
+  const isHelperInOffer = activeOffer?.helper.id === currentUserId;
+  const isRequesterInOffer = activeOffer?.requester?.id === currentUserId;
+  
+  // isRequester = the person who needs to confirm they got help
+  // isOfferingHelp = the person who provides help  
+  const isRequester = isRequesterInOffer;
+  const isOfferingHelp = isHelperInOffer;
   
   const canOffer = isVerified && !isAuthor && post.status === "open" && !activeOffer;
 

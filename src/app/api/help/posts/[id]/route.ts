@@ -74,6 +74,15 @@ export async function GET(
                 badge: true,
               },
             },
+            requester: {
+              select: {
+                id: true,
+                username: true,
+                fullName: true,
+                isVerified: true,
+                badge: true,
+              },
+            },
           },
           orderBy: { createdAt: "desc" },
         },

@@ -4,9 +4,10 @@ import { hashPassword } from "@/lib/auth/utils";
 import { requireAuthenticatedUser } from "@/lib/auth/require";
 import { successResponse, errorResponse, notFoundResponse } from "@/lib/api/response";
 import { isUserVerified } from "@/lib/users/verification";
+import { findUserById } from "@/lib/users/persistence";
 import type { User } from "@/types";
 
-type UserRow = (typeof mockDatabase.users)[number] & { isVerified?: boolean };
+type UserRow = (typeof mockDatabase.users)[number] & { isVerified?: boolean; verifiedUntil?: Date | string };
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,11 +15,18 @@ export async function GET(request: NextRequest) {
     if (!authed.ok) return authed.response;
     const decoded = authed.decoded;
 
-    // Get user profile
-    const user = mockDatabase.users.find((u) => u.id === decoded.userId);
-    if (!user) {
+    // Get user profile - check persistence first, then mockDatabase
+    const persistedUser = findUserById(decoded.userId);
+    const mockUser = mockDatabase.users.find((u) => u.id === decoded.userId);
+    
+    if (!persistedUser && !mockUser) {
       return notFoundResponse("User");
     }
+
+    // Merge data - persisted takes priority for isVerified
+    const user = mockUser || {};
+    const userIsVerified = persistedUser?.isVerified ?? (mockUser as UserRow)?.isVerified ?? false;
+    const verifiedUntil = persistedUser?.verifiedUntil ?? (mockUser as UserRow)?.verifiedUntil;
 
     // Get user's documents with formatted data
     const documents = mockDatabase.documents
@@ -44,19 +52,22 @@ export async function GET(request: NextRequest) {
     // Calculate statistics
     const totalLandArea = landProperties.reduce((sum, land) => sum + land.areaSize, 0);
 
+    // Use merged verification status
+    const effectiveUser = { isVerified: userIsVerified, verifiedUntil };
+
     return successResponse({
       user: {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        fullName: user.fullName,
-        citizenship: user.citizenship,
-        role: user.role,
-        badge: user.badge,
-        isVerified: isUserVerified(user),
-        verifiedUntil: (user as User).verifiedUntil,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
+        id: persistedUser?.id || (mockUser as UserRow)?.id,
+        email: persistedUser?.email || (mockUser as UserRow)?.email,
+        username: persistedUser?.username || (mockUser as UserRow)?.username,
+        fullName: persistedUser?.fullName || (mockUser as UserRow)?.fullName,
+        citizenship: persistedUser?.citizenship || (mockUser as UserRow)?.citizenship,
+        role: persistedUser?.role || (mockUser as UserRow)?.role,
+        badge: persistedUser?.badge || (mockUser as UserRow)?.badge,
+        isVerified: isUserVerified(effectiveUser),
+        verifiedUntil: verifiedUntil,
+        createdAt: persistedUser?.createdAt || (mockUser as UserRow)?.createdAt,
+        updatedAt: persistedUser?.updatedAt || (mockUser as UserRow)?.updatedAt,
       },
       documents,
       landProperties,
