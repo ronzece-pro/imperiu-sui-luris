@@ -22,7 +22,7 @@ interface HelpPost {
   images: string[];
   location?: string;
   urgency: "normal" | "urgent";
-  postType: "offer" | "request"; // "offer" = ofer ajutor, "request" = caut ajutor
+  postType?: "offer" | "request"; // Optional for old posts, defaults to "request"
   status: string;
   createdAt: string;
   author: {
@@ -439,18 +439,18 @@ export default function HelpPage() {
                     <Link
                       href={`/help/post/${post.id}?offer=true`}
                       className={`${
-                        post.postType === "offer" 
+                        (post.postType || "request") === "offer" 
                           ? "bg-amber-600 hover:bg-amber-700" 
                           : "bg-green-600 hover:bg-green-700"
                       } text-white px-4 py-2 rounded-lg font-medium transition-colors`}
                     >
-                      {post.postType === "offer" ? "🙋 Am nevoie de asta" : "🤝 Pot Ajuta"}
+                      {(post.postType || "request") === "offer" ? "🙋 Am nevoie de asta" : "🤝 Pot Ajuta"}
                     </Link>
                   )}
 
                   {post._count.offers > 0 && (
                     <span className="text-amber-400 text-sm">
-                      {post._count.offers} {post.postType === "offer" ? "persoane interesate" : "persoane oferă ajutor"}
+                      {post._count.offers} {(post.postType || "request") === "offer" ? "persoane interesate" : "persoane oferă ajutor"}
                     </span>
                   )}
                 </div>

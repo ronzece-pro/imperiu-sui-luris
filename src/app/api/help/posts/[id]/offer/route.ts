@@ -45,10 +45,11 @@ export async function POST(
       return errorResponse("Nu poți răspunde la propria postare", 400);
     }
 
-    // Determine roles based on postType
+    // Determine roles based on postType (default to "request" for old posts)
     // For "request" posts: author is requester, responder is helper
     // For "offer" posts: author is helper, responder is requester
-    const isOfferPost = post.postType === "offer";
+    const effectivePostType = post.postType || "request";
+    const isOfferPost = effectivePostType === "offer";
     const helperId = isOfferPost ? post.authorId : responderId;
     const requesterId = isOfferPost ? responderId : post.authorId;
 

@@ -11,7 +11,7 @@ interface HelpPost {
   images: string[];
   location?: string;
   urgency: string;
-  postType: "offer" | "request"; // "offer" = ofer ajutor, "request" = caut ajutor
+  postType?: "offer" | "request"; // Optional for old posts, defaults to "request"
   status: string;
   fromLocation?: string;
   toLocation?: string;
@@ -362,8 +362,9 @@ export default function HelpPostPage() {
   // Determine who is the REQUESTER (person asking for help) vs HELPER (person offering help)
   // For "offer" posts: author OFFERS help, responder REQUESTS help
   // For "request" posts: author REQUESTS help, responder OFFERS help
-  const isRequester = post.postType === "offer" ? isHelper : isAuthor;
-  const isOfferingHelp = post.postType === "offer" ? isAuthor : isHelper;
+  const effectivePostType = post.postType || "request"; // Default to request for old posts
+  const isRequester = effectivePostType === "offer" ? isHelper : isAuthor;
+  const isOfferingHelp = effectivePostType === "offer" ? isAuthor : isHelper;
   
   const canOffer = isVerified && !isAuthor && post.status === "open" && !activeOffer;
 
@@ -527,12 +528,12 @@ export default function HelpPostPage() {
             <button
               onClick={() => setShowOfferModal(true)}
               className={`w-full mt-4 ${
-                post.postType === "offer" 
+                effectivePostType === "offer" 
                   ? "bg-amber-600 hover:bg-amber-700" 
                   : "bg-green-600 hover:bg-green-700"
               } text-white py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2`}
             >
-              {post.postType === "offer" ? "🙋 Am nevoie de asta" : "🤝 Pot Ajuta"}
+              {effectivePostType === "offer" ? "🙋 Am nevoie de asta" : "🤝 Pot Ajuta"}
             </button>
           )}
         </div>
@@ -603,7 +604,7 @@ export default function HelpPostPage() {
               {isRequester ? (
                 <div className="space-y-2">
                   <p className="text-sm text-gray-400 mb-2">
-                    {post.postType === "offer" 
+                    {effectivePostType === "offer" 
                       ? "Ai primit ajutorul de care aveai nevoie?"
                       : "A fost rezolvată problema ta?"}
                   </p>
@@ -783,7 +784,7 @@ export default function HelpPostPage() {
       {/* Offer Modal - changes based on postType */}
       {showOfferModal && (
         <OfferModal
-          postType={post.postType}
+          postType={effectivePostType}
           onClose={() => setShowOfferModal(false)}
           onOffer={handleOffer}
         />
